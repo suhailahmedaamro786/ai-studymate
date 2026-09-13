@@ -1,0 +1,80 @@
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+
+type ApiError = { code: string; message: string };
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+async function getToken(): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
+}
+
+export async function api<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = await getToken();
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login?expired=true";
+    }
+    throw new Error("Session expired");
+  }
+
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    const error: ApiError = json.error || { code: "UNKNOWN", message: "An error occurred" };
+    throw new Error(error.message);
+  }
+  return json.data as T;
+}
+
+export async function apiMultipart<T>(
+  path: string,
+  formData: FormData
+): Promise<T> {
+  const token = await getToken();
+
+  const headers: HeadersInit = {};
+  if (token) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login?expired=true";
+    }
+    throw new Error("Session expired");
+  }
+
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    const error: ApiError = json.error || { code: "UNKNOWN", message: "An error occurred" };
+    throw new Error(error.message);
+  }
+  return json.data as T;
+}
