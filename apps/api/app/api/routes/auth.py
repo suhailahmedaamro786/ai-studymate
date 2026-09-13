@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, validator
+from supabase_auth.errors import AuthApiError
 from app.core.supabase import get_supabase_client
 from app.middleware.auth import get_current_user
 
@@ -36,16 +37,27 @@ class AuthResponse(BaseModel):
     error: dict | None = None
 
 
+def _auth_error_to_response(exc: AuthApiError) -> dict:
+    message = str(exc) or "Authentication error"
+    return {"code": "AUTH_ERROR", "message": message}
+
+
 @router.post("/auth/signup", response_model=AuthResponse)
 async def signup(body: SignupRequest):
     supabase = get_supabase_client()
-    result = supabase.auth.sign_up({
-        "email": body.email,
-        "password": body.password,
-        "options": {
-            "data": {"display_name": body.display_name or ""},
-        },
-    })
+    try:
+        result = supabase.auth.sign_up({
+            "email": body.email,
+            "password": body.password,
+            "options": {
+                "data": {"display_name": body.display_name or ""},
+            },
+        })
+    except AuthApiError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_auth_error_to_response(exc),
+        )
 
     error = getattr(result, "error", None)
     if error:
@@ -73,10 +85,16 @@ async def signup(body: SignupRequest):
 @router.post("/auth/login", response_model=AuthResponse)
 async def login(body: LoginRequest):
     supabase = get_supabase_client()
-    result = supabase.auth.sign_in_with_password({
-        "email": body.email,
-        "password": body.password,
-    })
+    try:
+        result = supabase.auth.sign_in_with_password({
+            "email": body.email,
+            "password": body.password,
+        })
+    except AuthApiError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=_auth_error_to_response(exc),
+        )
 
     error = getattr(result, "error", None)
     if error:
@@ -104,7 +122,13 @@ async def login(body: LoginRequest):
 @router.post("/auth/refresh", response_model=AuthResponse)
 async def refresh(body: RefreshRequest):
     supabase = get_supabase_client()
-    result = supabase.auth.refresh_session(body.refresh_token)
+    try:
+        result = supabase.auth.refresh_session(body.refresh_token)
+    except AuthApiError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=_auth_error_to_response(exc),
+        )
 
     error = getattr(result, "error", None)
     if error:
