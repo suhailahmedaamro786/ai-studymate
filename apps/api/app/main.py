@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
-app.include_router(auth.router, tags=["auth"])
+app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(health.router, tags=["health"])
 app.include_router(profiles.router, prefix="/api", tags=["profiles"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
