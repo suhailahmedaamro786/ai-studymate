@@ -15,6 +15,19 @@ async def generate_quiz(body: dict, user_id: str = Depends(get_current_user)):
     return {"data": quiz_data, "error": None}
 
 
+@router.get("/quiz")
+async def list_quizzes(user_id: str = Depends(get_current_user)):
+    supabase = get_supabase_client()
+    result = (
+        supabase.table("quizzes")
+        .select("id")
+        .eq("owner_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return {"data": [q["id"] for q in (result.data or [])], "error": None}
+
+
 @router.get("/quiz/{quiz_id}")
 async def get_quiz(quiz_id: str, user_id: str = Depends(get_current_user)):
     supabase = get_supabase_client()
