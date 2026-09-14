@@ -27,7 +27,8 @@ export async function api<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const normalizedPath = path.startsWith("/api") ? path : `/api${path}`;
+  const res = await fetch(`${API_URL}${normalizedPath}`, {
     ...options,
     headers,
   });
@@ -58,7 +59,8 @@ export async function apiMultipart<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const normalizedPath = path.startsWith("/api") ? path : `/api${path}`;
+  const res = await fetch(`${API_URL}${normalizedPath}`, {
     method: "POST",
     headers,
     body: formData,

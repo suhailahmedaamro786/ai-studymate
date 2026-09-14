@@ -41,7 +41,8 @@ export async function serverApi<T>(
     (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${apiUrl}${path}`, {
+  const normalizedPath = path.startsWith("/api") ? path : `/api${path}`;
+  const res = await fetch(`${apiUrl}${normalizedPath}`, {
     ...options,
     headers,
   });
