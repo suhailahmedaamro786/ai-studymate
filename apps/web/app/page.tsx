@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import LandingPage from "@/components/landing-page";
 
 export default async function RootPage({
   searchParams,
@@ -12,5 +13,5 @@ export default async function RootPage({
     redirect(`/auth/callback?code=${encodeURIComponent(code as string)}`);
   }
 
-  redirect("/login");
+  return <LandingPage />;
 }
