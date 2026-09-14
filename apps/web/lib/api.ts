@@ -12,11 +12,17 @@ async function getToken(): Promise<string | null> {
   return data.session?.access_token || null;
 }
 
+async function refreshSession(): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.refreshSession();
+  return data.session?.access_token || null;
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = await getToken();
+  let token = await getToken();
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -34,6 +40,26 @@ export async function api<T>(
   });
 
   if (res.status === 401) {
+    const refreshedToken = await refreshSession();
+    if (refreshedToken) {
+      const retryHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        ...options.headers,
+        "Authorization": `Bearer ${refreshedToken}`,
+      };
+      const retryRes = await fetch(`${API_URL}${normalizedPath}`, {
+        ...options,
+        headers: retryHeaders,
+      });
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        if (json.error) {
+          const error: ApiError = json.error;
+          throw new Error(error.message);
+        }
+        return json.data as T;
+      }
+    }
     if (typeof window !== "undefined") {
       window.location.href = "/login?expired=true";
     }
@@ -52,7 +78,7 @@ export async function apiMultipart<T>(
   path: string,
   formData: FormData
 ): Promise<T> {
-  const token = await getToken();
+  let token = await getToken();
 
   const headers: HeadersInit = {};
   if (token) {
@@ -67,6 +93,25 @@ export async function apiMultipart<T>(
   });
 
   if (res.status === 401) {
+    const refreshedToken = await refreshSession();
+    if (refreshedToken) {
+      const retryHeaders: HeadersInit = {
+        "Authorization": `Bearer ${refreshedToken}`,
+      };
+      const retryRes = await fetch(`${API_URL}${normalizedPath}`, {
+        method: "POST",
+        headers: retryHeaders,
+        body: formData,
+      });
+      if (retryRes.ok) {
+        const json = await retryRes.json();
+        if (json.error) {
+          const error: ApiError = json.error;
+          throw new Error(error.message);
+        }
+        return json.data as T;
+      }
+    }
     if (typeof window !== "undefined") {
       window.location.href = "/login?expired=true";
     }

@@ -1,6 +1,3 @@
-"use client";
-
-import Image from "next/image";
 import { TEAM_MEMBERS, TEAM_SECTION } from "@/lib/team-data";
 import { Avatar } from "@/components/ui/avatar";
 
