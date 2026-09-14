@@ -1,10 +1,9 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, serverApi } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
 import {
   MessageSquare,
   FileText,
@@ -26,12 +25,12 @@ async function DashboardContent() {
   }
 
   const [documents, chats, quizzes] = await Promise.all([
-    api<any[]>(`/documents`).catch(() => []),
-    api<any[]>(`/tutor/chats`).catch(() => []),
-    api<any[]>(`/quiz`).catch(() => []),
+    serverApi<any[]>(`/documents`).catch(() => []),
+    serverApi<any[]>(`/tutor/chats`).catch(() => []),
+    serverApi<any[]>(`/quiz`).catch(() => []),
   ]);
 
-  const profile = await api<any>(`/profiles/me`).catch(() => null);
+  const profile = await serverApi<any>(`/profiles/me`).catch(() => null);
   const displayName = profile?.display_name || data.session.user.email?.split("@")[0] || "Student";
   const greeting =
     new Date().getHours() < 12
