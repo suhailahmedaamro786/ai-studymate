@@ -17,7 +17,7 @@ A student signs up, verifies they are authenticated, and then can access their p
 **Acceptance Scenarios**:
 
 1. **Given** a visitor is not logged in, **When** they open the dashboard URL, **Then** they are redirected to login or shown an access denied state.
-2. **Given** a student has valid signup details, **When** they submit the signup form, **Then** they receive an authenticated session and can access the dashboard.
+2. **Given** a visitor is on the signup page, **When** they authenticate via a supported social provider (e.g., Google), **Then** they receive an authenticated session and can access the dashboard.
 3. **Given** a student is logged in, **When** they click logout, **Then** their session is terminated and dashboard access is blocked.
 
 ---
@@ -52,12 +52,27 @@ A student asks the AI tutor a question grounded in their uploaded materials. Whe
 
 ---
 
+### User Story 4 - Generate and evaluate a quiz (Priority: P1)
+A signed-in student generates a quiz on a chosen topic and difficulty, submits answers, and receives scored results with weak/strong topic analysis and recommendations.
+
+**Why this priority**: Quizzes turn passive study into active recall and identify knowledge gaps.
+
+**Independent Test**: This can be tested by generating a quiz, answering all questions, submitting, and verifying score + evaluation output appear.
+
+**Acceptance Scenarios**:
+
+1. **Given** a signed-in student, **When** they select a topic, difficulty, and question count and submit, **Then** a quiz is generated and presented with the requested number of questions.
+2. **Given** a student is taking a quiz, **When** they select answers and submit, **Then** the system computes a score and displays which answers were correct or incorrect.
+3. **Given** a quiz attempt was submitted, **When** the evaluation completes, **Then** the results include weak topics, strong topics, and recommendations for further study.
+
+---
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST allow a visitor to sign up for an account.
-- **FR-002**: System MUST allow a user to log in and establish an authenticated session.
+- **FR-001**: System MUST allow a visitor to sign up via social login (OAuth provider).
+- **FR-002**: System MUST allow a user to authenticate via OAuth (social login) and establish an authenticated session.
 - **FR-003**: System MUST provide logout that terminates the authenticated session.
 - **FR-004**: System MUST restrict the dashboard and all student-specific actions to authenticated users only.
 - **FR-005**: System MUST allow a signed-in user to upload a PDF document.
@@ -69,12 +84,13 @@ A student asks the AI tutor a question grounded in their uploaded materials. Whe
 - **FR-011**: System MUST allow a signed-in user to generate a quiz based on selected topic, difficulty, and number of questions.
 - **FR-012**: System MUST allow a user to submit quiz answers and compute a score.
 - **FR-013**: System MUST produce evaluation output including weak topics, strong topics, and recommendations based on quiz results.
-- **FR-014**: System MUST record user AI interactions relevant to the tutor (e.g., question and whether the answer was grounded).
+- **FR-014**: System MUST record tutor interactions as chat history for the authenticated user, including grounded/citations metadata.
 
 ### Assumptions
 
-- MVP uses email/password authentication (no social login).
-- MVP processing for PDFs completes within a reasonable time window for demo; failures are shown clearly.
+- MVP uses social login only (no email/password signup).
+- Supported providers: Google (implemented), with architecture ready for additional providers (Facebook, GitHub).
+- MVP processing for PDFs completes within 2 minutes for demo files with ≤10 pages; failures are shown clearly.
 - Citations are presented as references to retrieved document excerpts or page/section identifiers.
 
 ### Key Entities *(include if feature involves data)*

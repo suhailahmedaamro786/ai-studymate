@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 from app.domain.tutor.recording import create_message, get_chat_messages
 from app.domain.tutor.ai_adapter import call_with_fallback
 from app.domain.tutor.response_schema import TutorResponse
@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.post("/tutor/chats", status_code=201)
 async def create_chat(body: dict, user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("tutor_chats")
         .insert({"title": body.get("title", "New Chat"), "owner_id": user_id})
@@ -24,7 +24,7 @@ async def create_chat(body: dict, user_id: str = Depends(get_current_user)):
 
 @router.get("/tutor/chats")
 async def list_chats(user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("tutor_chats")
         .select("id, title, created_at, updated_at")
@@ -38,7 +38,7 @@ async def list_chats(user_id: str = Depends(get_current_user)):
 @router.get("/tutor/chats/{chat_id}/messages")
 async def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
     # Verify chat ownership
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     chat = (
         supabase.table("tutor_chats")
         .select("id")
@@ -65,7 +65,7 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
         raise HTTPException(status_code=422, detail="Message content is required")
 
     # Verify chat ownership
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     chat = (
         supabase.table("tutor_chats")
         .select("id")

@@ -107,3 +107,16 @@ async def get_current_user(request: Request) -> str:
     except JWTError as exc:
         logger.warning("Auth: JWT decode failed: %s", type(exc).__name__)
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def get_current_user_token(request: Request) -> str:
+    """Return the raw Bearer token from the Authorization header.
+
+    Use this when you need to forward the caller's JWT to another service
+    (e.g. PostgREST via supabase.postgrest.auth(token)) so that RLS policies
+    can identify the authenticated user.
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    return auth_header.removeprefix("Bearer ").strip()

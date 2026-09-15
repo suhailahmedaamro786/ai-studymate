@@ -1,6 +1,6 @@
 import logging
 from app.core.config import settings
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ async def retrieve_context(question: str, user_id: str) -> list[dict]:
     # Embed the question with fallback
     query_embedding = await embed_with_fallback(question)
 
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.rpc("match_document_chunks", {
             "p_owner_id": user_id,
@@ -28,7 +28,7 @@ async def retrieve_context(question: str, user_id: str) -> list[dict]:
         document_names: dict[str, str] = {}
         if document_ids:
             docs_result = (
-                supabase.table("documents")
+                get_service_role_client().table("documents")
                 .select("id, filename")
                 .in_("id", document_ids)
                 .execute()

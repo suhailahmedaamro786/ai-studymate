@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 
 
 async def create_message(chat_id: str, owner_id: str, role: str, content: str,
                          is_grounded: bool = False, citations: list | None = None) -> dict:
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("tutor_messages")
         .insert({
@@ -21,7 +21,7 @@ async def create_message(chat_id: str, owner_id: str, role: str, content: str,
 
 
 async def get_chat_messages(chat_id: str, owner_id: str) -> list[dict]:
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("tutor_messages")
         .select("*")

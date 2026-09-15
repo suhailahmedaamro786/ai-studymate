@@ -1,0 +1,29 @@
+[33mcommit 57b8342e23a6ff650cc53c42818eff248aa1574c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Suhail Ahmed Aamro <aamrosk519@gmail.com>
+Date:   Sun Sep 13 18:17:49 2026 +0500
+
+    fix: force Railway FastAPI deployment with Dockerfile
+
+[1mdiff --git a/apps/api/Dockerfile b/apps/api/Dockerfile[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e3909f1[m
+[1m--- /dev/null[m
+[1m+++ b/apps/api/Dockerfile[m
+[36m@@ -0,0 +1,17 @@[m
+[32m+[m[32mFROM python:3.12-slim[m
+[32m+[m
+[32m+[m[32mWORKDIR /app[m
+[32m+[m
+[32m+[m[32mRUN apt-get update && apt-get install -y --no-install-recommends \[m
+[32m+[m[32m    build-essential \[m
+[32m+[m[32m    && rm -rf /var/lib/apt/lists/*[m
+[32m+[m
+[32m+[m[32mCOPY requirements.txt .[m
+[32m+[m[32mRUN pip install --no-cache-dir -r requirements.txt[m
+[32m+[m
+[32m+[m[32mCOPY . .[m
+[32m+[m[32mRUN pip install --no-cache-dir -e .[m
+[32m+[m
+[32m+[m[32mEXPOSE 8000[m
+[32m+[m
+[32m+[m[32mCMD uvicorn app.main:app --host 0.0.0.0 --port $PORT[m

@@ -197,6 +197,11 @@
 - [ ] T066 [US1] Create admin health totals endpoint at `apps/api/app/api/routes/admin.py` (`GET /admin/health`)
 - [ ] T067 [US1] Create admin/demo page rendering totals + health at `apps/web/app/(app)/admin/page.tsx`
 
+### E2E and test coverage
+- [ ] T074 [P] End-to-end verification checklist covering complete P0 flow (auth → dashboard → upload → tutor chat → quiz → evaluation → admin totals) at `specs/001-user-auth/verification-checklist.md`
+- [ ] T075 [P] Add backend test for profile upsert endpoint at `apps/api/tests/integration/test_profiles.py`
+- [ ] T076 [P] Add backend test for admin endpoint auth/response shape at `apps/api/tests/contract/test_admin.py`
+
 **Acceptance criteria (Phase 7 Done):**
 - End-to-end P0 walkthrough works (auth → upload → tutor → quiz → evaluation → admin totals).
 - Error/fallback states are visible and actionable.
@@ -209,9 +214,9 @@
 
 ## Phase 8: P1 Work (deferred; not required for P0 MVP)
 
-- [ ] T068 [P1] Add study planner UI and backend endpoints (defer until P0 complete) at `apps/web/app/(app)/planner/page.tsx` and `apps/api/app/api/routes/planner.py`
-- [ ] T069 [P1] Add career assistant endpoints + UI at `apps/web/app/(app)/career/page.tsx` and `apps/api/app/api/routes/career.py`
-- [ ] T070 [P1] Add progress analytics (weak topics trends) at `apps/web/app/(app)/analytics/page.tsx` and `apps/api/app/api/routes/analytics.py`
+- [ ] T077 [P1] Add study planner UI and backend endpoints (defer until P0 complete) at `apps/web/app/(app)/planner/page.tsx` and `apps/api/app/api/routes/planner.py`
+- [ ] T078 [P1] Add career assistant endpoints + UI at `apps/web/app/(app)/career/page.tsx` and `apps/api/app/api/routes/career.py`
+- [ ] T079 [P1] Add progress analytics (weak topics trends) at `apps/web/app/(app)/analytics/page.tsx` and `apps/api/app/api/routes/analytics.py`
 
 **Acceptance criteria:**
 - Not started until Checkpoint 3 is green.

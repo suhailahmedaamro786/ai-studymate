@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ async def generate_quiz(body: dict, user_id: str = Depends(get_current_user)):
 
 @router.get("/quiz")
 async def list_quizzes(user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("quizzes")
         .select("id")
@@ -30,7 +30,7 @@ async def list_quizzes(user_id: str = Depends(get_current_user)):
 
 @router.get("/quiz/{quiz_id}")
 async def get_quiz(quiz_id: str, user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     quiz = (
         supabase.table("quizzes")
         .select("*")
@@ -63,7 +63,7 @@ async def submit_attempt(quiz_id: str, body: dict, user_id: str = Depends(get_cu
 
 @router.get("/quiz/{quiz_id}/attempts")
 async def list_attempts(quiz_id: str, user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("quiz_attempts")
         .select("id, score, total_correct, total_questions, created_at")

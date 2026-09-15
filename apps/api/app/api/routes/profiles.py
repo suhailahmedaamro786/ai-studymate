@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 from app.schemas.auth import ProfileUpsert
 
 router = APIRouter()
@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.get("/profiles/me")
 async def get_profile(user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("profiles")
         .select("*")
@@ -23,7 +23,7 @@ async def get_profile(user_id: str = Depends(get_current_user)):
 
 @router.put("/profiles/me")
 async def upsert_profile(body: ProfileUpsert, user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     payload = {**body.model_dump(), "user_id": user_id}
     result = (
         supabase.table("profiles")

@@ -2,13 +2,13 @@ import logging
 import uuid
 from app.domain.quiz.response_schema import QuizEvaluationResponse
 from app.domain.tutor.ai_adapter import call_with_fallback
-from app.core.supabase import get_supabase_client
+from app.core.supabase import get_service_role_client
 
 logger = logging.getLogger(__name__)
 
 
 async def evaluate_attempt(quiz_id: str, answers: dict[str, str], user_id: str) -> dict:
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
 
     # Get quiz questions
     questions_result = (

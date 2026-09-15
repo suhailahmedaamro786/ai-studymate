@@ -4,7 +4,7 @@ from typing import Tuple
 
 import fitz  # PyMuPDF
 from app.core.config import settings
-from app.core.supabase import get_supabase_client, get_service_role_client
+from app.core.supabase import get_service_role_client
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +13,12 @@ async def process_document(document_id: str, owner_id: str, filename: str):
     """Process a PDF: extract text, chunk, embed, store."""
     from app.domain.tutor.ai_adapter import embed_with_fallback
 
-    supabase = get_supabase_client()
-    service = get_service_role_client()
+    db = get_service_role_client()
 
     storage_path = f"{owner_id}/{filename}"
 
     # Update status to processing
-    supabase.table("documents").update({"status": "processing"}).eq("id", document_id).execute()
+    db.table("documents").update({"status": "processing"}).eq("id", document_id).execute()
 
     try:
         # Download file
@@ -59,7 +58,7 @@ async def process_document(document_id: str, owner_id: str, filename: str):
             service.table("document_chunks").insert(valid_chunks).execute()
 
         # Update document status
-        supabase.table("documents").update({
+        db.table("documents").update({
             "status": "ready",
             "page_count": page_count,
         }).eq("id", document_id).execute()
@@ -68,7 +67,7 @@ async def process_document(document_id: str, owner_id: str, filename: str):
 
     except Exception as e:
         logger.error(f"Document processing failed for {document_id}: {e}")
-        supabase.table("documents").update({
+        db.table("documents").update({
             "status": "failed",
             "error_message": str(e)[:500],
         }).eq("id", document_id).execute()

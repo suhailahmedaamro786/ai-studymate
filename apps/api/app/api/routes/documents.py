@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFi
 from pydantic import BaseModel, validator
 
 from app.api.deps import get_current_user
-from app.core.supabase import get_supabase_client, get_service_role_client
+from app.core.supabase import get_service_role_client
 from app.core.config import settings
 from app.domain.documents.processing import process_document
 from app.schemas.documents import DocumentUploadResponse
@@ -55,11 +55,10 @@ async def upload_document(
     storage_path = f"{user_id}/{safe_filename}"
     document_id = str(__import__("uuid").uuid4())
 
-    supabase = get_supabase_client()
-    service = get_service_role_client()
+    db = get_service_role_client()
 
     db_result = (
-        supabase.table("documents")
+        db.table("documents")
         .insert({
             "id": document_id,
             "owner_id": user_id,
@@ -77,10 +76,11 @@ async def upload_document(
         )
 
     try:
-        service.storage.from_("documents").upload(storage_path, contents, {"content-type": "application/pdf"})
+        get_service_role_client().storage.from_("documents").upload(storage_path, contents, {"content-type": "application/pdf"})
     except Exception as e:
         logger.error(f"Failed to upload file to storage: {e}")
-        supabase.table("documents").update({
+        # Use service role to update status — this is a cleanup path on a server error
+        db.table("documents").update({
             "status": "failed",
             "error_message": "Storage upload failed",
         }).eq("id", document_id).execute()
@@ -105,7 +105,7 @@ async def upload_document(
 
 @router.get("/documents")
 async def list_documents(user_id: str = Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     result = (
         supabase.table("documents")
         .select("id, filename, status, page_count, error_message, created_at")
@@ -123,11 +123,10 @@ async def delete_document(document_id: str, user_id: str = Depends(get_current_u
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_ID", "message": "Invalid document ID"})
 
-    supabase = get_supabase_client()
-    service = get_service_role_client()
+    db = get_service_role_client()
 
     doc = (
-        supabase.table("documents")
+        db.table("documents")
         .select("storage_path")
         .eq("id", doc_uuid)
         .eq("owner_id", user_id)
@@ -137,8 +136,8 @@ async def delete_document(document_id: str, user_id: str = Depends(get_current_u
     if not doc.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "NOT_FOUND", "message": "Document not found"})
 
-    service.storage.from_("documents").remove(doc.data["storage_path"])
+    get_service_role_client().storage.from_("documents").remove(doc.data["storage_path"])
 
-    supabase.table("documents").delete().eq("id", doc_uuid).execute()
+    db.table("documents").delete().eq("id", doc_uuid).execute()
 
     return DocumentDeleteResponse(success=True, error=None)

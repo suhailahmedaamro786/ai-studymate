@@ -1,6 +1,5 @@
 from app.core.config import settings
-from app.core.supabase import get_supabase_client
-
+from app.core.supabase import get_service_role_client
 
 VALID_TRANSITIONS = {
     "queued": ["processing"],
@@ -13,7 +12,7 @@ def can_transition(current: str, next_: str) -> bool:
 
 
 def update_status(document_id: str, new_status: str, error_message: str | None = None):
-    supabase = get_supabase_client()
+    supabase = get_service_role_client()
     payload = {"status": new_status}
     if error_message:
         payload["error_message"] = error_message

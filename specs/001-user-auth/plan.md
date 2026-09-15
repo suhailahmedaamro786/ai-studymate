@@ -5,7 +5,7 @@
 
 ## Summary
 
-Build the AI StudyMate MVP — a personalized learning platform with authentication, document management, RAG-grounded AI tutoring, and quiz generation with evaluation. The architecture is a modular monolith: Next.js frontend, FastAPI backend, Supabase (PostgreSQL + Auth + Storage), and an LLM abstraction layer powering five bounded agents (Tutor, Quiz, Evaluator, Planner, Career). P0 delivers auth, documents, tutor, and quiz/evaluation. P1/P2 are explicitly deferred.
+Build the AI StudyMate MVP — a personalized learning platform with social-only authentication (Google OAuth implemented), document management, RAG-grounded AI tutoring, and quiz generation with evaluation. The architecture is a modular monolith: Next.js frontend, FastAPI backend, Supabase (PostgreSQL + Auth + Storage), and an LLM abstraction layer powering P0 agents (Tutor, Quiz, Evaluator) plus P1-deferred agents (Planner, Career). P0 delivers auth, documents, tutor, and quiz/evaluation. P1/P2 are explicitly deferred.
 
 ## Technical Context
 
@@ -247,7 +247,10 @@ All user-owned tables include `owner_id UUID REFERENCES auth.users(id)` and enfo
 | difficulty | TEXT | NOT NULL, CHECK IN ('easy','medium','hard') |
 | question_count | INTEGER | NOT NULL, CHECK BETWEEN 1 AND 20 |
 | status | TEXT | NOT NULL, DEFAULT 'generating', CHECK IN ('generating','ready','failed') |
+| error_message | TEXT | |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
+
+**Indexes**: `idx_quizzes_owner_id` on (owner_id)
 
 ### quiz_questions
 | Column | Type | Constraints |
@@ -262,6 +265,8 @@ All user-owned tables include `owner_id UUID REFERENCES auth.users(id)` and enfo
 | topic_tag | TEXT | |
 | order_index | INTEGER | NOT NULL |
 
+**Indexes**: `idx_quiz_questions_quiz_id` on (quiz_id), `idx_quiz_questions_owner_id` on (owner_id)
+
 ### quiz_attempts
 | Column | Type | Constraints |
 |--------|------|-------------|
@@ -274,11 +279,14 @@ All user-owned tables include `owner_id UUID REFERENCES auth.users(id)` and enfo
 | total_questions | INTEGER | NOT NULL |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
 
+**Indexes**: `idx_quiz_attempts_quiz_id` on (quiz_id), `idx_quiz_attempts_owner_id` on (owner_id)
+
 ### quiz_evaluations
 | Column | Type | Constraints |
 |--------|------|-------------|
 | id | UUID | PK, DEFAULT gen_random_uuid() |
 | attempt_id | UUID | NOT NULL, FK → quiz_attempts(id) ON DELETE CASCADE, UNIQUE |
+| quiz_id | UUID | NOT NULL, FK → quizzes(id) ON DELETE CASCADE |
 | owner_id | UUID | NOT NULL, FK → auth.users(id) ON DELETE CASCADE |
 | weak_topics | JSONB | NOT NULL (array of strings) |
 | strong_topics | JSONB | NOT NULL (array of strings) |
@@ -541,9 +549,7 @@ Error responses:
 ### Admin
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | /api/admin/health | No* | System health + aggregate totals |
-
-*No auth for demo convenience; production would require admin role.
+| GET | /api/admin/health | Yes | System health + aggregate totals (authenticated users only)
 
 ---
 
@@ -558,20 +564,22 @@ Browser ←→ FastAPI backend (passes Supabase JWT in Authorization header)
 FastAPI ←→ Supabase (verifies JWT, extracts user_id)
 ```
 
-### Signup flow
-1. User fills signup form (`apps/web/app/(auth)/signup/page.tsx`)
-2. Frontend calls `supabase.auth.signUp({ email, password })`
-3. Supabase creates user in `auth.users`, returns session with JWT
-4. Frontend calls `PUT /api/profiles/me` to upsert profile row (display_name from form)
-5. Frontend stores session (Supabase SDK handles cookie/localStorage)
+### Signup/Login flow (OAuth-only)
+1. User opens signup/login page (`apps/web/app/(auth)/signup/page.tsx` or `login/page.tsx`)
+2. Frontend calls `supabase.auth.signInWithOAuth({ provider: 'google', redirectTo: '/auth/callback' })`
+3. User completes OAuth flow on provider; provider redirects to `/auth/callback` with `code`
+4. `/auth/callback` exchanges code for session via `supabase.auth.exchangeCodeForSession(code)`
+5. Frontend calls `PUT /api/profiles/me` to upsert profile row (display_name from OAuth metadata)
 6. Frontend redirects to `/dashboard`
 
-### Login flow
-1. User fills login form (`apps/web/app/(auth)/login/page.tsx`)
-2. Frontend calls `supabase.auth.signInWithPassword({ email, password })`
-3. On success, fetch profile via `GET /api/profiles/me`
-4. On success, redirect to `/dashboard`
-5. On failure, show error message
+### Logout flow
+1. User clicks LogoutButton
+2. Frontend calls `supabase.auth.signOut()`
+3. Session cleared, redirect to `/login`
+
+### Session expired handling
+- `SessionExpired.tsx` component detects auth errors during API calls
+- Clears local state, redirects to login with message
 
 ### Route protection (frontend)
 - `middleware.ts` intercepts requests to `/(app)/*` routes
@@ -767,7 +775,7 @@ If LLM output fails schema validation → retry once with stricter prompt → if
 
 ### Key UI components
 
-**Auth pages**: Email + password forms with loading spinners, inline error messages, link to alternate (login↔signup).
+**Auth pages**: Social OAuth buttons (Google) with loading spinners, inline error messages, link to alternate (login↔signup).
 
 **Dashboard**: Greeting with user name, quick-access cards to Documents / Tutor / Quiz, summary counts (documents uploaded, chats, quizzes taken).
 
@@ -1012,10 +1020,13 @@ No violations to justify. The architecture uses standard patterns within the mod
 | NFR-001 (Mobile-first) | §10 Styling | T065 |
 | NFR-002 (Accessible) | §10 Styling | T065 |
 | NFR-003 (Loading indicators) | §10 UI Components | T060 |
-| NFR-004 (Server-side auth) | §5 Auth Flow | T018–T019 |
+| NFR-004 (Server-side auth) | §5 Auth Flow | T018–T019, admin endpoint uses `get_current_user` |
 | NFR-005 (No frontend secrets) | §11 Env Variables | — |
 | NFR-006 (AI error handling) | §12 Error Handling | T059, T044 |
 | NFR-007 (Fallback UX) | §7, §12 | T041, T046 |
+| SC-008 (E2E walkthrough) | verification-checklist.md | T074 |
+| Profile upsert test coverage | tests/integration/test_profiles.py | T075 |
+| Admin endpoint test coverage | tests/contract/test_admin.py | T076 |
 
 ---
 
@@ -1034,7 +1045,7 @@ These are explicitly **not** part of this plan and will not be implemented until
 |-------|--------|
 | Plan covers all 14 functional requirements (FR-001–FR-014) | ✅ |
 | Plan covers all 7 non-functional requirements (NFR-001–NFR-007) | ✅ |
-| Plan maps to all 73 tasks (T001–T073) | ✅ |
+| Plan maps to all 76 tasks (T001–T076) | ✅ |
 | Plan respects all 6 constitution quality gates (A–F) | ✅ |
 | Plan uses specified tech stack (Next.js, FastAPI, Supabase, etc.) | ✅ |
 | Plan follows modular monolith (no microservices/Kafka/K8s) | ✅ |
