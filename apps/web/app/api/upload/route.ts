@@ -8,8 +8,10 @@ export async function POST(request: Request) {
     // Authenticate server-side using existing SSR setup
     const supabase = await createClient();
     const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token || null;
 
-    if (!data.session?.access_token) {
+    if (!accessToken) {
+      console.warn("[/api/upload] No auth session or access_token found in SSR cookies");
       return NextResponse.json(
         { error: { code: "UNAUTHORIZED", message: "No authenticated session" } },
         { status: 401 }
@@ -33,13 +35,16 @@ export async function POST(request: Request) {
     const backendRes = await fetch(`${API_URL}/api/documents/upload`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${data.session.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: backendFormData,
     });
 
     const responseBody = await backendRes.text();
     const contentType = backendRes.headers.get("content-type") || "";
+    if (!backendRes.ok) {
+      console.warn(`[/api/upload] Backend returned ${backendRes.status} for ${backendRes.url}`);
+    }
 
     return new NextResponse(responseBody, {
       status: backendRes.status,
