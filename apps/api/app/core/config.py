@@ -5,7 +5,8 @@ class Settings(BaseSettings):
     supabase_url: str = "https://hzmyjolpkykbnsdsiimy.supabase.co"
     supabase_anon_key: str
     supabase_service_role_key: str
-    supabase_jwt_secret: str
+    # JWT verification uses Supabase's JWKS endpoint; the legacy JWT secret is not required.
+    supabase_jwt_secret: str = ""
     openai_api_key: str = ""
     groq_api_key: str = ""
     gemini_api_key: str = ""
