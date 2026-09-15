@@ -44,7 +44,15 @@ export function DocumentsClient({ initialDocuments }: { initialDocuments: Docume
     try {
       const formData = new FormData();
       formData.append("file", file);
-      await apiMultipart<Document>("/documents/upload", formData);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({ error: { message: `Upload failed (HTTP ${res.status})` } }));
+        const message = json.error?.message || `Upload failed (HTTP ${res.status})`;
+        throw new Error(message);
+      }
       fileInput.value = "";
       await loadDocuments();
     } catch (e) {

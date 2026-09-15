@@ -1,6 +1,6 @@
 import logging
 from datetime import date, timedelta
-from app.domain.tutor.ai_adapter import get_ai_provider
+from app.domain.tutor.ai_adapter import call_with_fallback
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,6 @@ class StudyPlanResponse:
 
 
 async def generate_study_plan(request: StudyPlanRequest) -> StudyPlanResponse:
-    provider = get_ai_provider()
     today = date.today()
     days_until_deadline = max((request.deadline - today).days, 1)
 
@@ -33,7 +32,7 @@ async def generate_study_plan(request: StudyPlanRequest) -> StudyPlanResponse:
     )
 
     try:
-        response = await provider.complete(
+        response = await call_with_fallback(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Goal: {request.goal}. Deadline: {request.deadline}. Hours/day: {request.available_hours_per_day}"},

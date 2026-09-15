@@ -6,10 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 async def retrieve_context(question: str, user_id: str) -> list[dict]:
-    provider = get_ai_provider()
-
-    # Embed the question
-    query_embedding = await provider.embed(question)
+    # Embed the question with fallback
+    query_embedding = await embed_with_fallback(question)
 
     supabase = get_supabase_client()
     result = (
@@ -43,8 +41,3 @@ async def retrieve_context(question: str, user_id: str) -> list[dict]:
 
     logger.info(f"Retrieved {len(chunks)} chunks for user {user_id}")
     return chunks
-
-
-def get_ai_provider():
-    from app.domain.tutor.ai_adapter import get_ai_provider as _get
-    return _get()

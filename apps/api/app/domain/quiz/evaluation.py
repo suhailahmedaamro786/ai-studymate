@@ -1,14 +1,13 @@
 import logging
 import uuid
 from app.domain.quiz.response_schema import QuizEvaluationResponse
-from app.domain.tutor.ai_adapter import get_ai_provider
+from app.domain.tutor.ai_adapter import call_with_fallback
 from app.core.supabase import get_supabase_client
 
 logger = logging.getLogger(__name__)
 
 
 async def evaluate_attempt(quiz_id: str, answers: dict[str, str], user_id: str) -> dict:
-    provider = get_ai_provider()
     supabase = get_supabase_client()
 
     # Get quiz questions
@@ -69,7 +68,7 @@ async def evaluate_attempt(quiz_id: str, answers: dict[str, str], user_id: str) 
     strong = [t for t, results in topic_performance.items() if sum(results) == len(results)]
 
     try:
-        eval_response = await provider.complete(
+        eval_response = await call_with_fallback(
             messages=[
                 {"role": "system", "content": "Analyze quiz performance and provide study recommendations."},
                 {

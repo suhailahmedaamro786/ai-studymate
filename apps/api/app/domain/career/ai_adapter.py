@@ -1,5 +1,5 @@
 import logging
-from app.domain.tutor.ai_adapter import get_ai_provider
+from app.domain.tutor.ai_adapter import call_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,6 @@ class CareerAnalysisResponse:
 
 
 async def analyze_career(request: CareerAnalysisRequest) -> CareerAnalysisResponse:
-    provider = get_ai_provider()
     system_prompt = (
         "You are a career advisor for students. Analyze their profile, subjects, and goals. "
         "Return ONLY valid JSON with this exact shape:\n"
@@ -28,7 +27,7 @@ async def analyze_career(request: CareerAnalysisRequest) -> CareerAnalysisRespon
     )
 
     try:
-        response = await provider.complete(
+        response = await call_with_fallback(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Profile: {request.profile}\nSubjects: {request.subjects}\nGoals: {request.goals}"},

@@ -11,11 +11,10 @@ logger = logging.getLogger(__name__)
 
 async def process_document(document_id: str, owner_id: str, filename: str):
     """Process a PDF: extract text, chunk, embed, store."""
-    from app.domain.tutor.ai_adapter import get_ai_provider
+    from app.domain.tutor.ai_adapter import embed_with_fallback
 
     supabase = get_supabase_client()
     service = get_service_role_client()
-    provider = get_ai_provider()
 
     storage_path = f"{owner_id}/{filename}"
 
@@ -46,10 +45,10 @@ async def process_document(document_id: str, owner_id: str, filename: str):
         # Chunk text
         chunks = _chunk_text(pages_text, document_id, owner_id)
 
-        # Generate embeddings
+        # Generate embeddings with fallback
         for chunk in chunks:
             try:
-                chunk["embedding"] = await provider.embed(chunk["content"])
+                chunk["embedding"] = await embed_with_fallback(chunk["content"])
             except Exception as e:
                 logger.warning(f"Embedding failed for chunk {chunk['chunk_index']}: {e}")
                 chunk["embedding"] = None

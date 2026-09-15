@@ -1,8 +1,12 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from app.api.deps import get_current_user
 from app.core.supabase import get_supabase_client
 from app.domain.tutor.recording import create_message, get_chat_messages
-from app.domain.tutor.ai_adapter import get_ai_provider
+from app.domain.tutor.ai_adapter import call_with_fallback
+from app.domain.tutor.response_schema import TutorResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -54,7 +58,7 @@ async def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
 async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_current_user)):
     from app.domain.tutor.retrieval import retrieve_context
     from app.domain.tutor.grounding import check_grounding
-    from app.domain.tutor.response_schema import TutorResponse
+    from app.domain.tutor.response_schema import TutorResponse, Citation
 
     content = body.get("content", "").strip()
     if not content:
@@ -80,16 +84,55 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
     chunks = await retrieve_context(content, user_id)
     grounded, threshold = check_grounding(chunks)
 
-    # Generate response
-    provider = get_ai_provider()
-    response: TutorResponse = await provider.complete_tutor(content, chunks, grounded)
+    # Build messages for LLM with fallback
+    if not grounded:
+        answer_text = (
+            "I don't have enough information in your uploaded materials to answer "
+            "this question accurately. Try uploading relevant study materials first, "
+            "or ask a question about content that is in your documents."
+        )
+        msg = await create_message(
+            chat_id, user_id, "assistant",
+            answer_text,
+            is_grounded=False,
+            citations=[],
+        )
+        return {"data": msg, "error": None}
+
+    context = "\n\n".join(
+        f"[Source: {c.get('document_name', 'unknown')}, Page {c.get('page_number', '?')}]\n{c.get('content', '')}"
+        for c in chunks
+    )
+    system_prompt = (
+        "You are a study tutor. Answer the student's question using ONLY the provided context. "
+        "Cite sources by document name and page number. If the context is insufficient, say so explicitly. "
+        "Never fabricate information not present in the context."
+    )
+    user_prompt = f"Context:\n{context}\n\nQuestion: {content}\n\nAnswer based on the context above."
+
+    try:
+        response_data = await call_with_fallback(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            schema=TutorResponse,
+        )
+        parsed = TutorResponse(**response_data)
+    except Exception as e:
+        logger.error(f"Tutor response generation failed: {e}")
+        parsed = TutorResponse(
+            answer="I encountered an error processing your question. Please try again.",
+            is_grounded=False,
+            citations=[],
+        )
 
     # Save assistant message
     msg = await create_message(
         chat_id, user_id, "assistant",
-        response.answer,
-        is_grounded=response.is_grounded,
-        citations=[c.model_dump() for c in response.citations],
+        parsed.answer,
+        is_grounded=parsed.is_grounded,
+        citations=[c.model_dump() for c in parsed.citations],
     )
 
     return {"data": msg, "error": None}
