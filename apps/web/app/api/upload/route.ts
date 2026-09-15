@@ -5,28 +5,18 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function POST(request: Request) {
   try {
-    // Authenticate server-side using existing SSR setup
+    // Authenticate server-side using existing SSR setup.
+    // refreshSession() actively refreshes expired tokens and returns the
+    // (possibly refreshed) session data, even in stateless Route Handlers
+    // where cookie persistence is unavailable.
     const supabase = await createClient();
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    const accessToken = refreshData.session?.access_token || null;
 
-    // getUser() actively validates the session against Supabase Auth API.
-    // This catches expired or revoked tokens that getSession() would still return.
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) {
-      console.warn("[/api/upload] Session validation failed:", userError?.message || "no user");
+    if (refreshError || !accessToken) {
+      console.warn("[/api/upload] Session refresh failed:", refreshError?.message || "no token");
       return NextResponse.json(
         { error: { code: "UNAUTHORIZED", message: "No authenticated session" } },
-        { status: 401 }
-      );
-    }
-
-    // After getUser() validates, getSession() returns the (possibly refreshed) access token
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token || null;
-
-    if (!accessToken) {
-      console.warn("[/api/upload] No access_token after session validation");
-      return NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "No access token" } },
         { status: 401 }
       );
     }
