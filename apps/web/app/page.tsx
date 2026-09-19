@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,14 +58,7 @@ const steps = [
   { icon: Briefcase, title: "Grow", description: "Explore career paths aligned with your skills" },
 ];
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getSession();
-
-  if (data.session) {
-    redirect("/dashboard");
-  }
-
+export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
