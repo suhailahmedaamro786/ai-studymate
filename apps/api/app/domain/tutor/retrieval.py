@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 async def retrieve_context(question: str, user_id: str) -> list[dict]:
-    query_embedding = await embed_with_fallback(question)
+    query_embedding = await embed_with_fallback(question, task_type="retrieval_query")
 
     db = get_service_role_client()
     result = db.rpc("match_document_chunks", {
