@@ -13,12 +13,22 @@ async def get_profile(user_id: str = Depends(get_current_user)):
         supabase.table("profiles")
         .select("*")
         .eq("user_id", user_id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return {"data": result.data, "error": None}
+    if result.data:
+        return {"data": result.data, "error": None}
+
+    # Auth users can exist before their profile row is created.
+    # Create a safe empty profile so the dashboard does not fail with PGRST116.
+    created = (
+        supabase.table("profiles")
+        .upsert({"user_id": user_id, "subjects": []}, on_conflict="user_id")
+        .execute()
+    )
+    if not created.data:
+        raise HTTPException(status_code=500, detail="Unable to initialize profile")
+    return {"data": created.data[0], "error": None}
 
 
 @router.put("/profiles/me")
