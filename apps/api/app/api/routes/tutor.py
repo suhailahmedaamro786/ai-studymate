@@ -116,9 +116,22 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            schema=TutorResponse,
+            schema=None,
         )
-        parsed = TutorResponse(**response_data)
+        parsed = TutorResponse(
+            answer=response_data.get("content", ""),
+            is_grounded=True,
+            citations=[
+                {
+                    "document_id": c.get("document_id", ""),
+                    "document_name": c.get("document_name", "unknown"),
+                    "chunk_index": c.get("chunk_index", 0),
+                    "page_number": c.get("page_number"),
+                    "excerpt": c.get("content", "")[:200],
+                }
+                for c in chunks[:3]
+            ],
+        )
     except Exception as e:
         logger.error(f"Tutor response generation failed: {e}")
         parsed = TutorResponse(
