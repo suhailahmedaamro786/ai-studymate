@@ -51,7 +51,7 @@ class OpenAIProvider(AIProvider):
             logger.error(f"OpenAI completion failed: {e}")
             raise
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
         client = get_openai_client()
         try:
             response = await client.embeddings.create(
