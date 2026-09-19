@@ -24,6 +24,8 @@ async def get_profile(user_id: str = Depends(get_current_user)):
     created = (
         supabase.table("profiles")
         .upsert({"user_id": user_id, "subjects": []}, on_conflict="user_id")
+        .select("*")
+        .single()
         .execute()
     )
     if not created.data:
