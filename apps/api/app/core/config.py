@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     log_level: str = "info"
     cors_origins: str = "http://localhost:3000"
     grounding_threshold: float = 0.7
-    max_file_size_mb: int = 10
+    max_file_size_mb: int = 25
     max_chunk_size: int = 500
     chunk_overlap: int = 100
     retrieval_top_k: int = 5
