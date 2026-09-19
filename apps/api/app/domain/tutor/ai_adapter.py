@@ -21,7 +21,7 @@ class AIProvider:
     async def complete(self, messages: list[dict], schema: type | None = None) -> dict:
         raise NotImplementedError
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
         raise NotImplementedError
 
     async def complete_tutor(self, question: str, chunks: list[dict], grounded: bool) -> dict:
@@ -152,7 +152,7 @@ class GroqProvider(AIProvider):
             ],
         ).model_dump()
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
         raise NotImplementedError("Groq does not provide embeddings")
 
 
@@ -193,8 +193,28 @@ class GeminiProvider(AIProvider):
             ],
         ).model_dump()
 
-    async def embed(self, text: str) -> list[float]:
-        raise NotImplementedError("Gemini embeddings are not configured for this RAG pipeline")
+    async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
+        """Generate a 1536-dim Gemini embedding compatible with the pgvector schema."""
+        import asyncio
+        import google.generativeai as genai
+
+        try:
+            result = await asyncio.to_thread(
+                genai.embed_content,
+                model="models/gemini-embedding-001",
+                content=text,
+                task_type=task_type,
+                output_dimensionality=1536,
+            )
+            embedding = result.get("embedding") if isinstance(result, dict) else getattr(result, "embedding", None)
+            if not embedding or len(embedding) != 1536:
+                raise RuntimeError(
+                    f"Gemini returned an invalid embedding dimension: {len(embedding) if embedding else 0}"
+                )
+            return list(embedding)
+        except Exception as e:
+            logger.error(f"Gemini embedding failed: {e}")
+            raise
 
 
 class RetryableError(Exception):
@@ -263,15 +283,15 @@ async def call_with_fallback(messages: list[dict], schema: type | None = None) -
     raise RetryableError(f"All providers failed. Last error: {last_error}") from last_error
 
 
-async def embed_with_fallback(text: str) -> list[float]:
+async def embed_with_fallback(text: str, task_type: str = "retrieval_document") -> list[float]:
     global _provider_chain
     if _provider_chain is None:
         _provider_chain = _build_provider_chain()
     last_error: Exception | None = None
     for provider in _provider_chain:
         try:
-            return await provider.embed(text)
+            return await provider.embed(text, task_type=task_type)
         except Exception as exc:
             logger.warning("Provider %s embedding failed: %s", provider.__class__.__name__, exc)
             last_error = exc
-    raise RuntimeError(f"All embedding providers failed. Configure OPENAI_API_KEY for embeddings. Last error: {last_error}")
+    raise RuntimeError(f"All embedding providers failed. Configure a working embedding provider (OPENAI_API_KEY or GEMINI_API_KEY). Last error: {last_error}")
