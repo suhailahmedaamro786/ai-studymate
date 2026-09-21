@@ -118,24 +118,29 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
             ],
             schema=None,
         )
+        answer = str(response_data.get("content", "")).strip()
+        if not answer:
+            raise RuntimeError("LLM returned an empty tutor response")
+
+        citations = []
+        for c in chunks[:3]:
+            citations.append({
+                "document_id": str(c.get("document_id") or ""),
+                "document_name": str(c.get("document_name") or "unknown"),
+                "chunk_index": int(c.get("chunk_index") or 0),
+                "page_number": c.get("page_number"),
+                "excerpt": str(c.get("content") or "")[:200],
+            })
+
         parsed = TutorResponse(
-            answer=response_data.get("content", ""),
+            answer=answer,
             is_grounded=True,
-            citations=[
-                {
-                    "document_id": c.get("document_id", ""),
-                    "document_name": c.get("document_name", "unknown"),
-                    "chunk_index": c.get("chunk_index", 0),
-                    "page_number": c.get("page_number"),
-                    "excerpt": c.get("content", "")[:200],
-                }
-                for c in chunks[:3]
-            ],
+            citations=citations,
         )
     except Exception as e:
-        logger.error(f"Tutor response generation failed: {e}")
+        logger.exception("Tutor response generation failed")
         parsed = TutorResponse(
-            answer="I encountered an error processing your question. Please try again.",
+            answer="The AI tutor provider is temporarily unavailable. Please try again in a moment.",
             is_grounded=False,
             citations=[],
         )
