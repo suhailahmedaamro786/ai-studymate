@@ -117,7 +117,7 @@ class GroqProvider(AIProvider):
         if not settings.groq_api_key:
             raise RuntimeError("GROQ_API_KEY is not configured")
         self._client = AsyncGroq(api_key=settings.groq_api_key)
-        self._model = "llama-3.3-70b-versatile"
+        self._model = settings.groq_model
 
     async def complete(self, messages: list[dict], schema: type | None = None) -> dict:
         response = await self._client.chat.completions.create(model=self._model, messages=messages)
@@ -234,9 +234,9 @@ def _is_retryable(error: Exception) -> bool:
 
 
 def _build_provider_chain() -> list[AIProvider]:
+    # Prefer providers that are known to be configured for production use.
+    # Groq is first so an exhausted OpenAI account cannot break tutor chat.
     chain: list[AIProvider] = []
-    if settings.openai_api_key:
-        chain.append(OpenAIProvider())
     if settings.groq_api_key:
         try:
             chain.append(GroqProvider())
@@ -247,6 +247,8 @@ def _build_provider_chain() -> list[AIProvider]:
             chain.append(GeminiProvider())
         except Exception as exc:
             logger.warning("Gemini provider skipped: %s", exc)
+    if settings.openai_api_key:
+        chain.append(OpenAIProvider())
     return chain
 
 
