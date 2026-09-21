@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "info"
     cors_origins: str = "http://localhost:3000"
-    grounding_threshold: float = 0.7
+    grounding_threshold: float = 0.4
     max_file_size_mb: int = 25
     max_chunk_size: int = 500
     chunk_overlap: int = 100
