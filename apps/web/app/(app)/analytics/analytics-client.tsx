@@ -61,9 +61,9 @@ export function AnalyticsClient({ initialQuizIds }: { initialQuizIds: string[] }
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in">
+    <div className="min-w-0 max-w-4xl mx-auto space-y-6 animate-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Progress Analytics</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Progress Analytics</h1>
         <p className="text-muted-foreground mt-1">Track your learning progress and performance over time</p>
       </div>
 
