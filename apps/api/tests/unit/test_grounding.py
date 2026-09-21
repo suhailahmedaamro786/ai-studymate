@@ -13,10 +13,10 @@ def test_grounding_above_threshold():
 
 
 def test_grounding_below_threshold():
-    chunks = [{"similarity": 0.5}, {"similarity": 0.6}]
+    chunks = [{"similarity": 0.2}, {"similarity": 0.35}]
     grounded, score = check_grounding(chunks)
     assert grounded is False
-    assert score == 0.6
+    assert score == 0.35
 
 
 def test_grounding_empty_chunks():
