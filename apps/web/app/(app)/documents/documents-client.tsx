@@ -72,7 +72,7 @@ export function DocumentsClient({ initialDocuments }: { initialDocuments: Docume
   };
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="min-w-0 space-y-6 animate-in">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Documents</h1>
         <p className="text-muted-foreground mt-1">Upload PDFs to build your knowledge base</p>
@@ -144,14 +144,14 @@ export function DocumentsClient({ initialDocuments }: { initialDocuments: Docume
               const StatusIcon = status.icon;
               return (
                 <Card key={doc.id} className="transition-shadow hover:shadow-sm">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-4 min-w-0">
+                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-4">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
                       <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary shrink-0">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{doc.filename}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <p className="font-medium break-anywhere">{doc.filename}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span className={`
                             inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border
                             ${status.className}
