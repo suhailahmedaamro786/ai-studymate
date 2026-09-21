@@ -94,7 +94,7 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
   };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-8rem)]">
+    <div className="flex min-w-0 flex-col sm:flex-row gap-3 sm:gap-4 min-h-[calc(100vh-10rem)] sm:h-[calc(100vh-8rem)]">
       {/* Sidebar */}
       <div className="w-52 shrink-0 space-y-3 hidden sm:block">
         <Button onClick={createChat} className="w-full gap-2 shadow-sm">
@@ -154,8 +154,8 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
       </div>
 
       {/* Chat area */}
-      <Card className="flex-1 flex flex-col shadow-sm">
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+      <Card className="flex-1 min-w-0 min-h-0 flex flex-col shadow-sm">
+        <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-4">
           {!activeChatId ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary">
@@ -198,7 +198,7 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in`}
               >
                 <div className={`
-                  max-w-[85%] md:max-w-[75%] rounded-xl px-4 py-3
+                  max-w-[92%] sm:max-w-[85%] md:max-w-[75%] break-words rounded-xl px-4 py-3
                   ${msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-sm"
                     : "bg-muted border rounded-bl-sm"
@@ -270,7 +270,7 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
           <div ref={messagesEnd} />
         </CardContent>
 
-        <div className="p-4 border-t space-y-2">
+        <div className="p-3 sm:p-4 border-t space-y-2 mobile-safe-area">
           {error && (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
               <p className="text-sm text-destructive">{error}</p>
