@@ -12,7 +12,7 @@ _test_secrets = {
 for key, value in _test_secrets.items():
     os.environ[key] = value
 
-_api_dir = r"D:\PAK ANGEL\HACKTHON-1\ai-studymate\apps\api"
+_api_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _api_dir not in sys.path:
     sys.path.insert(0, _api_dir)
 
