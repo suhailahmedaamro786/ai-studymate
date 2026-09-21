@@ -88,10 +88,10 @@ export default function QuizPage() {
   const progressPercent = quiz ? Math.round((answeredCount / quiz.questions.length) * 100) : 0;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-in">
+    <div className="min-w-0 max-w-3xl mx-auto space-y-6 animate-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Quiz</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Quiz</h1>
           <p className="text-muted-foreground mt-1">Test your knowledge with AI-generated quizzes</p>
         </div>
       </div>
