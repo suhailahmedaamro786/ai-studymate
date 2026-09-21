@@ -42,7 +42,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center auth-gradient px-4">
       <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl shadow-primary/10 p-8 space-y-6">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl shadow-primary/10 p-5 sm:p-8 space-y-6">
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/20 text-primary border border-primary/20">
               <BookOpen className="h-6 w-6" />
