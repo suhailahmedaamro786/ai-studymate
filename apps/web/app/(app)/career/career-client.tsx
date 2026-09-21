@@ -36,9 +36,9 @@ export function CareerClient({ initialRecommendations }: { initialRecommendation
   const latest = recommendations[0];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-in">
+    <div className="min-w-0 max-w-3xl mx-auto space-y-6 animate-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Career Assistant</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Career Assistant</h1>
         <p className="text-muted-foreground mt-1">Discover career paths aligned with your skills and interests</p>
       </div>
 
