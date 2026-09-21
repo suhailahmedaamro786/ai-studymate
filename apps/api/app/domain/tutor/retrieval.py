@@ -14,7 +14,7 @@ async def retrieve_context(question: str, user_id: str) -> list[dict]:
     result = db.rpc("match_document_chunks", {
         "p_owner_id": user_id,
         "p_query_embedding": query_embedding,
-        "p_match_threshold": settings.grounding_threshold,
+        "p_match_threshold": 0.3,
         "p_match_count": settings.retrieval_top_k,
     }).execute()
 
