@@ -64,16 +64,16 @@ async function DashboardContent() {
   const hasActivity = stats.some((s) => s.value > 0);
 
   return (
-    <div className="space-y-8 animate-in">
+    <div className="min-w-0 space-y-6 sm:space-y-8 animate-in">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-background border p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-background border p-4 sm:p-6 md:p-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
         <div className="relative">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="text-sm font-medium text-primary">Welcome back</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">{greeting}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">{greeting}</h1>
           <p className="text-muted-foreground max-w-xl">
             Your AI-powered learning companion. What would you like to work on today?
           </p>
@@ -156,7 +156,7 @@ async function DashboardContent() {
             <CardDescription>Your recent study activity at a glance</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="text-center py-3 rounded-lg bg-muted/50">
                 <p className="text-2xl font-bold">{stats[0].value}</p>
                 <p className="text-xs text-muted-foreground mt-1">Documents</p>
