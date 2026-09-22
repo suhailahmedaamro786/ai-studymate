@@ -144,10 +144,13 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
             is_grounded=True,
             citations=citations,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Tutor response generation failed")
         parsed = TutorResponse(
-            answer="The AI tutor provider is temporarily unavailable. Please try again in a moment.",
+            answer=(
+                "The AI tutor provider is temporarily unavailable. "
+                "Please try again in a moment."
+            ),
             is_grounded=False,
             citations=[],
         )

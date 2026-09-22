@@ -346,7 +346,10 @@ async def embed_with_fallback(text: str, task_type: str = "retrieval_document") 
     last_error: Exception | None = None
     for provider in _provider_chain:
         try:
-            return await provider.embed(text, task_type=task_type)
+            try:
+                return await provider.embed(text, task_type=task_type)
+            except TypeError:
+                return await provider.embed(text)
         except Exception as exc:
             logger.warning(
                 "Provider %s embedding failed: %s",

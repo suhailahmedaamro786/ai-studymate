@@ -9,6 +9,8 @@ _test_secrets = {
     "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
     "SUPABASE_JWT_SECRET": "test-jwt-secret",
     "OPENAI_API_KEY": "test-openai-key",
+    "GROQ_API_KEY": "test-groq-key",
+    "GEMINI_API_KEY": "test-gemini-key",
 }
 for key, value in _test_secrets.items():
     os.environ[key] = value
