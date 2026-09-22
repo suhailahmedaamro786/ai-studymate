@@ -1,4 +1,5 @@
 import logging
+
 from app.domain.tutor.ai_adapter import call_with_fallback
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,13 @@ class CareerAnalysisRequest:
 
 
 class CareerAnalysisResponse:
-    def __init__(self, recommended_roles: list[str], skill_gaps: list[str], recommended_skills: list[str], learning_paths: list[str]):
+    def __init__(
+        self,
+        recommended_roles: list[str],
+        skill_gaps: list[str],
+        recommended_skills: list[str],
+        learning_paths: list[str],
+    ):
         self.recommended_roles = recommended_roles
         self.skill_gaps = skill_gaps
         self.recommended_skills = recommended_skills
@@ -21,16 +28,24 @@ class CareerAnalysisResponse:
 
 async def analyze_career(request: CareerAnalysisRequest) -> CareerAnalysisResponse:
     system_prompt = (
-        "You are a career advisor for students. Analyze their profile, subjects, and goals. "
-        "Return ONLY valid JSON with this exact shape:\n"
-        '{"recommended_roles": ["string"], "skill_gaps": ["string"], "recommended_skills": ["string"], "learning_paths": ["string"]}'
+        "You are a career advisor for students. Analyze their profile, "
+        "subjects, and goals. Return ONLY valid JSON with this exact shape:\n"
+        '{"recommended_roles": ["string"], "skill_gaps": ["string"], '
+        '"recommended_skills": ["string"], "learning_paths": ["string"]}'
     )
 
     try:
         response = await call_with_fallback(
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Profile: {request.profile}\nSubjects: {request.subjects}\nGoals: {request.goals}"},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Profile: {request.profile}\n"
+                        f"Subjects: {request.subjects}\n"
+                        f"Goals: {request.goals}"
+                    ),
+                },
             ],
             schema=None,
         )

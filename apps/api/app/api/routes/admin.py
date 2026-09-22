@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+
 from app.api.deps import get_current_user
 from app.core.supabase import get_service_role_client
 
@@ -20,7 +21,9 @@ async def admin_health(user_id: str = Depends(get_current_user)):
                 "total_users": users.count if hasattr(users, "count") else len(users.data or []),
                 "total_documents": docs.count if hasattr(docs, "count") else len(docs.data or []),
                 "total_chats": chats.count if hasattr(chats, "count") else len(chats.data or []),
-                "total_quizzes": quizzes.count if hasattr(quizzes, "count") else len(quizzes.data or []),
+                "total_quizzes": (
+                    quizzes.count if hasattr(quizzes, "count") else len(quizzes.data or [])
+                ),
                 "system_status": "ok",
             },
             "error": None,

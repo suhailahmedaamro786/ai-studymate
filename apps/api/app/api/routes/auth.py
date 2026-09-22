@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, validator
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, EmailStr, field_validator
 from supabase_auth.errors import AuthApiError
-from app.core.supabase import get_supabase_client
-from app.middleware.auth import get_current_user
 
+from app.core.supabase import get_supabase_client
 
 router = APIRouter()
 
@@ -13,7 +12,7 @@ class SignupRequest(BaseModel):
     password: str
     display_name: str | None = None
 
-    @validator("password")
+    @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
         if len(v) < 6:
@@ -57,13 +56,16 @@ async def signup(body: SignupRequest):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=_auth_error_to_response(exc),
-        )
+        ) from exc
 
     error = getattr(result, "error", None)
     if error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": error.get("code", "SIGNUP_FAILED"), "message": error.get("message", "Signup failed")},
+            detail={
+                "code": error.get("code", "SIGNUP_FAILED"),
+                "message": error.get("message", "Signup failed"),
+            },
         )
 
     session = getattr(result, "session", None)
@@ -71,7 +73,10 @@ async def signup(body: SignupRequest):
     if not session or not session.access_token or not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "SIGNUP_INCOMPLETE", "message": "Signup succeeded but no session was returned"},
+            detail={
+                "code": "SIGNUP_INCOMPLETE",
+                "message": "Signup succeeded but no session was returned",
+            },
         )
 
     return AuthResponse(
@@ -94,13 +99,16 @@ async def login(body: LoginRequest):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=_auth_error_to_response(exc),
-        )
+        ) from exc
 
     error = getattr(result, "error", None)
     if error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": error.get("code", "LOGIN_FAILED"), "message": error.get("message", "Invalid credentials")},
+            detail={
+                "code": error.get("code", "LOGIN_FAILED"),
+                "message": error.get("message", "Invalid credentials"),
+            },
         )
 
     session = getattr(result, "session", None)
@@ -108,7 +116,10 @@ async def login(body: LoginRequest):
     if not session or not session.access_token or not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "LOGIN_INCOMPLETE", "message": "Login failed"},
+            detail={
+                "code": "LOGIN_INCOMPLETE",
+                "message": "Login failed",
+            },
         )
 
     return AuthResponse(
@@ -128,13 +139,16 @@ async def refresh(body: RefreshRequest):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=_auth_error_to_response(exc),
-        )
+        ) from exc
 
     error = getattr(result, "error", None)
     if error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": error.get("code", "REFRESH_FAILED"), "message": error.get("message", "Refresh token invalid")},
+            detail={
+                "code": error.get("code", "REFRESH_FAILED"),
+                "message": error.get("message", "Refresh token invalid"),
+            },
         )
 
     session = getattr(result, "session", None)
@@ -142,7 +156,10 @@ async def refresh(body: RefreshRequest):
     if not session or not session.access_token or not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "REFRESH_INCOMPLETE", "message": "Refresh failed"},
+            detail={
+                "code": "REFRESH_INCOMPLETE",
+                "message": "Refresh failed",
+            },
         )
 
     return AuthResponse(

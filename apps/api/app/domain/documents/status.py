@@ -1,4 +1,3 @@
-from app.core.config import settings
 from app.core.supabase import get_service_role_client
 
 VALID_TRANSITIONS = {

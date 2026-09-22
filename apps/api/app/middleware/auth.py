@@ -1,5 +1,4 @@
 import base64
-import hashlib
 import logging
 from functools import lru_cache
 from typing import Any
@@ -7,10 +6,11 @@ from typing import Any
 import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from fastapi import Request, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi import HTTPException, Request
+from fastapi.security import HTTPBearer
+from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -42,9 +42,16 @@ def _jwk_to_pem(key: dict[str, Any]) -> str:
     if curve is None:
         raise ValueError(f"Unsupported curve: {crv}")
 
-    public_numbers = ec.EllipticCurvePublicNumbers(x=int.from_bytes(x, "big"), y=int.from_bytes(y, "big"), curve=curve)
+    public_numbers = ec.EllipticCurvePublicNumbers(
+        x=int.from_bytes(x, "big"),
+        y=int.from_bytes(y, "big"),
+        curve=curve,
+    )
     public_key = public_numbers.public_key()
-    pem = public_key.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    pem = public_key.public_bytes(
+        serialization.Encoding.PEM,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
     return pem.decode("utf-8")
 
 

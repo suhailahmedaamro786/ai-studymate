@@ -1,8 +1,8 @@
 import logging
-import uuid
+
+from app.core.supabase import get_service_role_client
 from app.domain.quiz.response_schema import QuizEvaluationResponse
 from app.domain.tutor.ai_adapter import call_with_fallback
-from app.core.supabase import get_service_role_client
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +70,17 @@ async def evaluate_attempt(quiz_id: str, answers: dict[str, str], user_id: str) 
     try:
         eval_response = await call_with_fallback(
             messages=[
-                {"role": "system", "content": "Analyze quiz performance and provide study recommendations."},
+                {
+                    "role": "system",
+                    "content": "Analyze quiz performance and provide study recommendations.",
+                },
                 {
                     "role": "user",
-                    "content": f"Score: {correct}/{total}. Weak topics: {weak}. Strong topics: {strong}. Topic details: {topic_performance}",
+                    "content": (
+                        f"Score: {correct}/{total}. Weak topics: {weak}. "
+                        f"Strong topics: {strong}. "
+                        f"Topic details: {topic_performance}"
+                    ),
                 },
             ],
             schema=QuizEvaluationResponse,

@@ -12,12 +12,14 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     ai_model: str = "gpt-4o"
     embedding_model: str = "text-embedding-3-small"
-    groq_model: str = "openai/gpt-oss-120b"
-    gemini_model: str = "gemini-2.5-flash"
+    groq_model: str = "llama-3.3-70b-versatile"
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_embedding_model: str = "text-embedding-004"
+    embedding_dimension: int = 768
     environment: str = "development"
     log_level: str = "info"
     cors_origins: str = "http://localhost:3000"
-    grounding_threshold: float = 0.4
+    grounding_threshold: float = 0.7
     max_file_size_mb: int = 25
     max_chunk_size: int = 500
     chunk_overlap: int = 100

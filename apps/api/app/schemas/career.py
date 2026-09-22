@@ -1,13 +1,13 @@
+
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class CareerRecommendationResponse(BaseModel):
     id: str
-    recommended_roles: List[str]
-    skill_gaps: List[str]
-    recommended_skills: List[str]
-    learning_paths: List[str]
+    recommended_roles: list[str]
+    skill_gaps: list[str]
+    recommended_skills: list[str]
+    learning_paths: list[str]
     created_at: str
 
 

@@ -1,4 +1,5 @@
 from supabase import create_client as sb_create_client
+
 from app.core.config import settings
 
 

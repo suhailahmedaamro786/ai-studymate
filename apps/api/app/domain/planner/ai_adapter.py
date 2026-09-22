@@ -1,13 +1,19 @@
 import logging
-from datetime import date, timedelta
+from datetime import date
+
 from app.domain.tutor.ai_adapter import call_with_fallback
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class StudyPlanRequest:
-    def __init__(self, goal: str, available_hours_per_day: float, deadline: date, profile: dict | None = None):
+    def __init__(
+        self,
+        goal: str,
+        available_hours_per_day: float,
+        deadline: date,
+        profile: dict | None = None,
+    ):
         self.goal = goal
         self.available_hours_per_day = available_hours_per_day
         self.deadline = deadline
@@ -27,15 +33,24 @@ async def generate_study_plan(request: StudyPlanRequest) -> StudyPlanResponse:
     system_prompt = (
         "You are a study planner. Generate a concise study plan and daily tasks. "
         "Return ONLY valid JSON with this exact shape:\n"
-        '{"plan_text": "2-3 sentence summary", "tasks": [{"title": "string", "description": "string", "scheduled_date": "YYYY-MM-DD"}]}\n'
-        f"Available study days: {days_until_deadline}. Daily hours: {request.available_hours_per_day}. Goal: {request.goal}"
+        '{"plan_text": "2-3 sentence summary", "tasks": [{"title": "string", '
+        '"description": "string", "scheduled_date": "YYYY-MM-DD"}]}\n'
+        f"Available study days: {days_until_deadline}. "
+        f"Daily hours: {request.available_hours_per_day}. "
+        f"Goal: {request.goal}"
     )
 
     try:
         response = await call_with_fallback(
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Goal: {request.goal}. Deadline: {request.deadline}. Hours/day: {request.available_hours_per_day}"},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Goal: {request.goal}. Deadline: {request.deadline}. "
+                        f"Hours/day: {request.available_hours_per_day}"
+                    ),
+                },
             ],
             schema=None,
         )

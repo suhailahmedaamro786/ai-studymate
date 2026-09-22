@@ -1,9 +1,17 @@
 from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.api.deps import get_current_user
 from app.core.supabase import get_service_role_client
-from app.schemas.planner import StudyPlanCreate, StudyPlanWithTasks, StudyTaskCreate, StudyTaskUpdate, StudyTaskResponse
-from app.domain.planner.ai_adapter import generate_study_plan, StudyPlanRequest
+from app.domain.planner.ai_adapter import StudyPlanRequest, generate_study_plan
+from app.schemas.planner import (
+    StudyPlanCreate,
+    StudyPlanWithTasks,
+    StudyTaskCreate,
+    StudyTaskResponse,
+    StudyTaskUpdate,
+)
 
 router = APIRouter()
 
@@ -11,12 +19,16 @@ router = APIRouter()
 @router.post("/planner/plans", status_code=201)
 async def create_study_plan(body: StudyPlanCreate, user_id: str = Depends(get_current_user)):
     if body.deadline < date.today():
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Deadline must be in the future")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Deadline must be in the future",
+        )
 
     supabase = get_service_role_client()
 
-    # Fetch user profile for personalization
-    profile_result = supabase.table("profiles").select("*").eq("user_id", user_id).maybe_single().execute()
+    profile_result = (
+        supabase.table("profiles").select("*").eq("user_id", user_id).maybe_single().execute()
+    )
     profile = profile_result.data if profile_result.data else {}
 
     request = StudyPlanRequest(
@@ -29,7 +41,10 @@ async def create_study_plan(body: StudyPlanCreate, user_id: str = Depends(get_cu
     try:
         plan_response = await generate_study_plan(request)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail={"code": "AI_PROVIDER_ERROR", "message": str(e)[:200]})
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "AI_PROVIDER_ERROR", "message": str(e)[:200]},
+        )
 
     plan_insert = supabase.table("study_plans").insert({
         "owner_id": user_id,
@@ -59,7 +74,13 @@ async def create_study_plan(body: StudyPlanCreate, user_id: str = Depends(get_cu
 @router.get("/planner/plans")
 async def list_study_plans(user_id: str = Depends(get_current_user)):
     supabase = get_service_role_client()
-    plans_result = supabase.table("study_plans").select("*").eq("owner_id", user_id).order("created_at", desc=True).execute()
+    plans_result = (
+        supabase.table("study_plans")
+        .select("*")
+        .eq("owner_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
     plans = plans_result.data or []
     return {"data": plans, "error": None}
 
@@ -67,11 +88,24 @@ async def list_study_plans(user_id: str = Depends(get_current_user)):
 @router.get("/planner/plans/{plan_id}")
 async def get_study_plan(plan_id: str, user_id: str = Depends(get_current_user)):
     supabase = get_service_role_client()
-    plan_result = supabase.table("study_plans").select("*").eq("id", plan_id).eq("owner_id", user_id).maybe_single().execute()
+    plan_result = (
+        supabase.table("study_plans")
+        .select("*")
+        .eq("id", plan_id)
+        .eq("owner_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not plan_result.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
 
-    tasks_result = supabase.table("study_tasks").select("*").eq("plan_id", plan_id).order("scheduled_date").execute()
+    tasks_result = (
+        supabase.table("study_tasks")
+        .select("*")
+        .eq("plan_id", plan_id)
+        .order("scheduled_date")
+        .execute()
+    )
     tasks = [StudyTaskResponse(**t) for t in (tasks_result.data or [])]
     return StudyPlanWithTasks(plan=plan_result.data, tasks=tasks)
 
@@ -79,7 +113,14 @@ async def get_study_plan(plan_id: str, user_id: str = Depends(get_current_user))
 @router.post("/planner/tasks", status_code=201)
 async def create_study_task(body: StudyTaskCreate, user_id: str = Depends(get_current_user)):
     supabase = get_service_role_client()
-    plan = supabase.table("study_plans").select("id").eq("id", body.plan_id).eq("owner_id", user_id).maybe_single().execute()
+    plan = (
+        supabase.table("study_plans")
+        .select("id")
+        .eq("id", body.plan_id)
+        .eq("owner_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not plan.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
 
@@ -95,13 +136,22 @@ async def create_study_task(body: StudyTaskCreate, user_id: str = Depends(get_cu
 
 
 @router.patch("/planner/tasks/{task_id}")
-async def update_study_task(task_id: str, body: StudyTaskUpdate, user_id: str = Depends(get_current_user)):
+async def update_study_task(
+    task_id: str, body: StudyTaskUpdate, user_id: str = Depends(get_current_user),
+):
     supabase = get_service_role_client()
-    task = supabase.table("study_tasks").select("*").eq("id", task_id).eq("owner_id", user_id).maybe_single().execute()
+    task = (
+        supabase.table("study_tasks")
+        .select("*")
+        .eq("id", task_id)
+        .eq("owner_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not task.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    updates = {}
+    updates: dict[str, object] = {}
     if body.title is not None:
         updates["title"] = body.title
     if body.description is not None:
@@ -120,14 +170,27 @@ async def update_study_task(task_id: str, body: StudyTaskUpdate, user_id: str = 
 @router.get("/planner/tasks")
 async def list_study_tasks(user_id: str = Depends(get_current_user)):
     supabase = get_service_role_client()
-    result = supabase.table("study_tasks").select("*").eq("owner_id", user_id).order("scheduled_date").execute()
+    result = (
+        supabase.table("study_tasks")
+        .select("*")
+        .eq("owner_id", user_id)
+        .order("scheduled_date")
+        .execute()
+    )
     return {"data": result.data or [], "error": None}
 
 
 @router.delete("/planner/tasks/{task_id}")
 async def delete_study_task(task_id: str, user_id: str = Depends(get_current_user)):
     supabase = get_service_role_client()
-    task = supabase.table("study_tasks").select("id").eq("id", task_id).eq("owner_id", user_id).maybe_single().execute()
+    task = (
+        supabase.table("study_tasks")
+        .select("id")
+        .eq("id", task_id)
+        .eq("owner_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not task.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     supabase.table("study_tasks").delete().eq("id", task_id).execute()

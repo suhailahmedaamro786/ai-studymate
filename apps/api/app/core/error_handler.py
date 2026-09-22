@@ -1,8 +1,9 @@
-from fastapi import Request, FastAPI
-from fastapi.responses import JSONResponse
-from app.core.exceptions import AppError, AuthError, ForbiddenError, NotFoundError, ValidationError, AIProviderError
-from app.core.logging import request_id_var, user_id_var
 import logging
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from app.core.exceptions import AppError
 
 logger = logging.getLogger(__name__)
 

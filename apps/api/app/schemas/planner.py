@@ -1,6 +1,6 @@
+from datetime import date
+
 from pydantic import BaseModel
-from datetime import date, datetime
-from typing import List, Optional
 
 
 class StudyPlanCreate(BaseModel):
@@ -21,28 +21,28 @@ class StudyPlanResponse(BaseModel):
 class StudyTaskCreate(BaseModel):
     plan_id: str
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     scheduled_date: date
 
 
 class StudyTaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    scheduled_date: Optional[date] = None
-    completed: Optional[bool] = None
+    title: str | None = None
+    description: str | None = None
+    scheduled_date: date | None = None
+    completed: bool | None = None
 
 
 class StudyTaskResponse(BaseModel):
     id: str
     plan_id: str
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     scheduled_date: str
     completed: bool
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
     created_at: str
 
 
 class StudyPlanWithTasks(BaseModel):
     plan: StudyPlanResponse
-    tasks: List[StudyTaskResponse]
+    tasks: list[StudyTaskResponse]

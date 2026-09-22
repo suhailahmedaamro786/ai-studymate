@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import admin, auth, career, documents, health, planner, profiles, quiz, tutor
 from app.core.config import settings
-from app.core.logging import setup_logging
 from app.core.error_handler import register_exception_handlers
-from app.api.routes import health, profiles, documents, tutor, quiz, admin, auth, planner, career
+from app.core.logging import setup_logging
 
 setup_logging()
 

@@ -1,10 +1,11 @@
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException
+
 from app.api.deps import get_current_user
 from app.core.supabase import get_service_role_client
-from app.domain.tutor.recording import create_message, get_chat_messages
 from app.domain.tutor.ai_adapter import call_with_fallback
-from app.domain.tutor.response_schema import TutorResponse
+from app.domain.tutor.recording import create_message, get_chat_messages
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +57,9 @@ async def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
 
 @router.post("/tutor/chats/{chat_id}/messages")
 async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_current_user)):
-    from app.domain.tutor.retrieval import retrieve_context
     from app.domain.tutor.grounding import check_grounding
-    from app.domain.tutor.response_schema import TutorResponse, Citation
+    from app.domain.tutor.response_schema import TutorResponse
+    from app.domain.tutor.retrieval import retrieve_context
 
     content = body.get("content", "").strip()
     if not content:
@@ -100,15 +101,21 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
         return {"data": msg, "error": None}
 
     context = "\n\n".join(
-        f"[Source: {c.get('document_name', 'unknown')}, Page {c.get('page_number', '?')}]\n{c.get('content', '')}"
+        (
+            f"[Source: {c.get('document_name', 'unknown')}, "
+            f"Page {c.get('page_number', '?')}]\n{c.get('content', '')}"
+        )
         for c in chunks
     )
     system_prompt = (
         "You are a study tutor. Answer the student's question using ONLY the provided context. "
-        "Cite sources by document name and page number. If the context is insufficient, say so explicitly. "
-        "Never fabricate information not present in the context."
+        "Cite sources by document name and page number. If the context is insufficient, "
+        "say so explicitly. Never fabricate information not present in the context."
     )
-    user_prompt = f"Context:\n{context}\n\nQuestion: {content}\n\nAnswer based on the context above."
+    user_prompt = (
+        f"Context:\n{context}\n\nQuestion: {content}\n"
+        "Answer based on the context above."
+    )
 
     try:
         response_data = await call_with_fallback(

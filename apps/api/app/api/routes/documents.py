@@ -33,17 +33,32 @@ def _safe_filename(filename: str | None) -> str:
 
 
 @router.post("/documents/upload", response_model=DocumentUploadResponse)
-async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = File(...), user_id: str = Depends(get_current_user)):
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+):
     filename = _safe_filename(file.filename)
     if not _is_pdf(file.content_type or "", filename):
-        raise HTTPException(status_code=415, detail={"code": "INVALID_FILE_TYPE", "message": "Only PDF files are allowed"})
+        raise HTTPException(
+            status_code=415,
+            detail={"code": "INVALID_FILE_TYPE", "message": "Only PDF files are allowed"},
+        )
 
     contents = await file.read()
     max_size_bytes = settings.max_file_size_mb * 1024 * 1024
     if len(contents) > max_size_bytes:
-        raise HTTPException(status_code=413, detail={"code": "FILE_TOO_LARGE", "message": f"File size exceeds {settings.max_file_size_mb}MB limit"})
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "code": "FILE_TOO_LARGE",
+                "message": f"File size exceeds {settings.max_file_size_mb}MB limit",
+            },
+        )
     if not contents:
-        raise HTTPException(status_code=400, detail={"code": "EMPTY_FILE", "message": "The uploaded PDF is empty"})
+        raise HTTPException(
+            status_code=400, detail={"code": "EMPTY_FILE", "message": "The uploaded PDF is empty"}
+        )
 
     document_id = str(uuid.uuid4())
     storage_path = f"{user_id}/{document_id}/{filename}"
@@ -54,28 +69,45 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
             "id": document_id, "owner_id": user_id, "filename": filename,
             "storage_path": storage_path, "status": "queued",
         }).execute()
-        db.storage.from_("documents").upload(storage_path, contents, {"content-type": "application/pdf", "upsert": "false"})
+        db.storage.from_("documents").upload(
+            storage_path, contents, {"content-type": "application/pdf", "upsert": "false"}
+        )
     except Exception as exc:
         logger.exception("Document upload failed")
         try:
             db.table("documents").delete().eq("id", document_id).eq("owner_id", user_id).execute()
         except Exception:
             logger.exception("Failed to clean up document record")
-        raise HTTPException(status_code=500, detail={"code": "UPLOAD_FAILED", "message": "Failed to upload the document. Please try again."}) from exc
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "UPLOAD_FAILED",
+                "message": "Failed to upload the document. Please try again.",
+            },
+        ) from exc
 
     background_tasks.add_task(process_document, document_id, user_id, storage_path)
     doc = db_result.data[0] if getattr(db_result, "data", None) else {}
     return DocumentUploadResponse(
-        id=doc.get("id", document_id), filename=doc.get("filename", filename),
-        status=doc.get("status", "queued"), page_count=doc.get("page_count"),
-        error_message=doc.get("error_message"), created_at=doc.get("created_at"),
+        id=doc.get("id", document_id),
+        filename=doc.get("filename", filename),
+        status=doc.get("status", "queued"),
+        page_count=doc.get("page_count"),
+        error_message=doc.get("error_message"),
+        created_at=doc.get("created_at"),
     )
 
 
 @router.get("/documents")
 async def list_documents(user_id: str = Depends(get_current_user)):
     db = get_service_role_client()
-    result = db.table("documents").select("id, filename, status, page_count, error_message, created_at").eq("owner_id", user_id).order("created_at", desc=True).execute()
+    result = (
+        db.table("documents")
+        .select("id, filename, status, page_count, error_message, created_at")
+        .eq("owner_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
     return {"data": result.data, "error": None}
 
 
@@ -84,12 +116,25 @@ async def delete_document(document_id: str, user_id: str = Depends(get_current_u
     try:
         doc_uuid = str(UUID(document_id))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail={"code": "INVALID_ID", "message": "Invalid document ID"}) from exc
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "INVALID_ID", "message": "Invalid document ID"},
+        ) from exc
 
     db = get_service_role_client()
-    doc = db.table("documents").select("storage_path").eq("id", doc_uuid).eq("owner_id", user_id).maybe_single().execute()
+    doc = (
+        db.table("documents")
+        .select("storage_path")
+        .eq("id", doc_uuid)
+        .eq("owner_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not doc.data:
-        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Document not found"})
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": "Document not found"},
+        )
 
     try:
         db.storage.from_("documents").remove([doc.data["storage_path"]])

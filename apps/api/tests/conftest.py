@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 import pytest
 
 # Provide required env vars for tests before importing app modules
