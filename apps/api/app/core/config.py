@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     ai_model: str = "gpt-4o"
     embedding_model: str = "text-embedding-3-small"
+    groq_model: str = "openai/gpt-oss-120b"
+    gemini_model: str = "gemini-2.5-flash"
     environment: str = "development"
     log_level: str = "info"
     cors_origins: str = "http://localhost:3000"
