@@ -8,6 +8,7 @@ class DocumentResponse(BaseModel):
     filename: str
     status: str
     page_count: int | None = None
+    chunk_count: int = 0
     error_message: str | None = None
     created_at: datetime
 
