@@ -60,8 +60,15 @@ class OpenAIProvider(AIProvider):
             response = await client.embeddings.create(
                 model=settings.embedding_model,
                 input=text,
+                dimensions=settings.embedding_dimension,
             )
-            return response.data[0].embedding
+            embedding = response.data[0].embedding
+            if len(embedding) != settings.embedding_dimension:
+                raise RuntimeError(
+                    "OpenAI embedding dimension mismatch: "
+                    f"got {len(embedding)}, expected {settings.embedding_dimension}"
+                )
+            return embedding
         except Exception as e:
             logger.error(f"OpenAI embedding failed: {e}")
             raise
@@ -356,23 +363,46 @@ async def call_with_fallback(messages: list[dict], schema: type | None = None) -
 
 
 async def embed_with_fallback(text: str, task_type: str = "retrieval_document") -> list[float]:
-    global _provider_chain
-    if _provider_chain is None:
-        _provider_chain = _build_provider_chain()
+    """Generate embeddings using only providers compatible with our vector schema."""
+    providers: list[AIProvider] = []
+
+    if settings.gemini_api_key:
+        try:
+            providers.append(GeminiProvider())
+        except Exception as exc:
+            logger.warning("Gemini embedding provider skipped: %s", exc)
+
+    if settings.openai_api_key:
+        providers.append(OpenAIProvider())
+
+    if not providers:
+        raise RuntimeError(
+            "No compatible embedding provider configured. Set GEMINI_API_KEY "
+            "or OPENAI_API_KEY."
+        )
+
     last_error: Exception | None = None
-    for provider in _provider_chain:
+    for provider in providers:
         try:
             try:
-                return await provider.embed(text, task_type=task_type)
+                embedding = await provider.embed(text, task_type=task_type)
             except TypeError:
-                return await provider.embed(text)
+                embedding = await provider.embed(text)
+            if len(embedding) != settings.embedding_dimension:
+                raise RuntimeError(
+                    "Embedding dimension mismatch: "
+                    f"got {len(embedding)}, expected {settings.embedding_dimension}"
+                )
+            return embedding
         except Exception as exc:
             logger.warning(
                 "Provider %s embedding failed: %s",
-                provider.__class__.__name__, exc,
+                provider.__class__.__name__,
+                exc,
             )
             last_error = exc
+
     raise RuntimeError(
-        "All embedding providers failed. Configure GEMINI_API_KEY "
-        f"for embeddings. Last error: {last_error}"
+        "All compatible embedding providers failed. "
+        f"Last error: {last_error}"
     )
