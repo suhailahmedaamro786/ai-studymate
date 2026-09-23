@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     embedding_model: str = "text-embedding-3-small"
     groq_model: str = "llama-3.3-70b-versatile"
     gemini_model: str = "gemini-2.0-flash"
-    gemini_embedding_model: str = "text-embedding-004"
+    gemini_embedding_model: str = "gemini-embedding-2"
     embedding_dimension: int = 768
     environment: str = "development"
     log_level: str = "info"
