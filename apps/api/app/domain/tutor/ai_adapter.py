@@ -239,26 +239,35 @@ class GeminiProvider(AIProvider):
         ).model_dump()
 
     async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
-        import google.generativeai as genai
+        # Gemini Embedding 2 uses the current google-genai SDK. The old
+        # text-embedding-004 model was shut down in January 2026.
+        from google import genai
+        from google.genai import types
 
         def _embed() -> list[float]:
-            result = genai.embed_content(
-                model=self._embedding_model,
-                content=text,
-                task_type=task_type,
-            )
-            return result["embedding"]
+            client = genai.Client(api_key=settings.gemini_api_key)
+            try:
+                result = client.models.embed_content(
+                    model=self._embedding_model,
+                    contents=text,
+                    config=types.EmbedContentConfig(
+                        output_dimensionality=settings.embedding_dimension,
+                    ),
+                )
+                if not result.embeddings:
+                    raise RuntimeError("Gemini returned no embeddings")
+                values = result.embeddings[0].values
+                return list(values or [])
+            finally:
+                close = getattr(client, "close", None)
+                if close:
+                    close()
 
         try:
             embedding = await asyncio.to_thread(_embed)
         except Exception as exc:
             logger.error("Gemini embedding failed: %s", exc)
             raise NonRetryableError(f"Gemini embedding failed: {exc}") from exc
-
-        if not isinstance(embedding, list) or not all(
-            isinstance(v, (int, float)) for v in embedding
-        ):
-            raise RuntimeError(f"Gemini returned invalid embedding type: {type(embedding)}")
 
         expected_dim = settings.embedding_dimension
         if len(embedding) != expected_dim:
