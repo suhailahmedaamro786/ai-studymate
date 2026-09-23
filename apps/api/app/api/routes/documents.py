@@ -89,7 +89,22 @@ async def upload_document(
     # Railway can recycle a process after the HTTP response; synchronous processing
     # guarantees that extraction, embeddings, and chunk persistence finish before
     # the upload is reported as successful.
-    await process_document(document_id, user_id, storage_path)
+    try:
+        chunk_count = await process_document(document_id, user_id, storage_path)
+    except Exception as exc:
+        logger.exception("Document indexing failed for %s", document_id)
+        try:
+            db.storage.from_("documents").remove([storage_path])
+        except Exception:
+            logger.warning("Failed to clean up storage for failed document %s", document_id)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "DOCUMENT_INDEXING_FAILED",
+                "message": "The PDF was uploaded but could not be indexed for RAG. "
+                "Check the document status/error message and retry.",
+            },
+        ) from exc
 
     processed = (
         db.table("documents")
@@ -105,6 +120,7 @@ async def upload_document(
         filename=doc.get("filename", filename),
         status=doc.get("status", "failed"),
         page_count=doc.get("page_count"),
+        chunk_count=chunk_count,
         error_message=doc.get("error_message"),
         created_at=doc.get("created_at"),
     )
