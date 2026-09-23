@@ -64,7 +64,7 @@ async def upload_document(
     db = get_service_role_client()
 
     try:
-        db_result = db.table("documents").insert({
+        db.table("documents").insert({
             "id": document_id, "owner_id": user_id, "filename": filename,
             "storage_path": storage_path, "status": "queued",
         }).execute()
