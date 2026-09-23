@@ -31,7 +31,9 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
       setError("");
       api<TutorMessage[]>(`/tutor/chats/${activeChatId}/messages`)
         .then((msgs) => setMessages(msgs.map(m => ({ ...m, chatId: activeChatId }))))
-        .catch(() => {});
+        .catch((e) => {
+          setError(e instanceof Error ? e.message : "Failed to load chat messages");
+        });
     }
   }, [activeChatId]);
 
@@ -94,14 +96,14 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
   };
 
   return (
-    <div className="flex min-w-0 flex-col sm:flex-row gap-3 sm:gap-4 min-h-[calc(100vh-10rem)] sm:h-[calc(100vh-8rem)]">
+    <div className="flex min-w-0 min-h-0 flex-col sm:flex-row gap-3 sm:gap-4 h-[calc(100dvh-9rem)]">
       {/* Sidebar */}
       <div className="w-52 shrink-0 space-y-3 hidden sm:block">
         <Button onClick={createChat} className="w-full gap-2 shadow-sm">
           <MessageSquare className="h-4 w-4" />
           New Chat
         </Button>
-        <div className="space-y-1">
+        <div className="space-y-1 max-h-[calc(100dvh-13rem)] overflow-y-auto pr-1">
           {chats.length === 0 ? (
             <p className="text-xs text-muted-foreground px-1">No chats yet. Start a new one!</p>
           ) : (
@@ -154,7 +156,7 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
       </div>
 
       {/* Chat area */}
-      <Card className="flex-1 min-w-0 min-h-0 flex flex-col shadow-sm">
+      <Card className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden shadow-sm">
         <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-4">
           {!activeChatId ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
@@ -212,6 +214,13 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <div className={"mt-1.5 text-[10px] leading-none " + (
+                        msg.role === "user"
+                          ? "text-primary-foreground/70 text-right"
+                          : "text-muted-foreground"
+                      )}>
+                        {formatMessageTime(msg.created_at)}
+                      </div>
                       {msg.role === "assistant" && (
                         <div className="mt-3 space-y-2">
                           {msg.is_grounded ? (
@@ -312,6 +321,16 @@ export function TutorClient({ initialChats }: { initialChats: any[] }) {
       </Card>
     </div>
   );
+}
+
+function formatMessageTime(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function SparklesIcon() {
