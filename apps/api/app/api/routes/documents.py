@@ -3,7 +3,7 @@ import uuid
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.api.deps import get_current_user
@@ -34,7 +34,6 @@ def _safe_filename(filename: str | None) -> str:
 
 @router.post("/documents/upload", response_model=DocumentUploadResponse)
 async def upload_document(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user),
 ):
@@ -86,12 +85,25 @@ async def upload_document(
             },
         ) from exc
 
-    background_tasks.add_task(process_document, document_id, user_id, storage_path)
-    doc = db_result.data[0] if getattr(db_result, "data", None) else {}
+    # Do not depend on an ephemeral background task for the core RAG pipeline.
+    # Railway can recycle a process after the HTTP response; synchronous processing
+    # guarantees that extraction, embeddings, and chunk persistence finish before
+    # the upload is reported as successful.
+    await process_document(document_id, user_id, storage_path)
+
+    processed = (
+        db.table("documents")
+        .select("id, filename, status, page_count, error_message, created_at")
+        .eq("id", document_id)
+        .eq("owner_id", user_id)
+        .single()
+        .execute()
+    )
+    doc = processed.data or {}
     return DocumentUploadResponse(
         id=doc.get("id", document_id),
         filename=doc.get("filename", filename),
-        status=doc.get("status", "queued"),
+        status=doc.get("status", "failed"),
         page_count=doc.get("page_count"),
         error_message=doc.get("error_message"),
         created_at=doc.get("created_at"),
