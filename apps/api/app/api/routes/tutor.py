@@ -144,18 +144,14 @@ async def send_message(chat_id: str, body: dict, user_id: str = Depends(get_curr
             is_grounded=True,
             citations=citations,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Tutor response generation failed")
-        parsed = TutorResponse(
-            answer=(
-                "The AI tutor provider is temporarily unavailable. "
-                "Please try again in a moment."
-            ),
-            is_grounded=False,
-            citations=[],
-        )
+        raise HTTPException(
+            status_code=503,
+            detail="AI tutor provider is temporarily unavailable. Please retry in a moment.",
+        ) from exc
 
-    # Save assistant message
+    # Save assistant message only after a successful provider response.
     msg = await create_message(
         chat_id, user_id, "assistant",
         parsed.answer,
