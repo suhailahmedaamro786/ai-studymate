@@ -9,8 +9,13 @@ from app.core.supabase import get_service_role_client
 logger = logging.getLogger(__name__)
 
 
-async def process_document(document_id: str, owner_id: str, storage_path: str):
-    """Extract text, chunk, embed, and persist a previously uploaded PDF."""
+async def process_document(document_id: str, owner_id: str, storage_path: str) -> int:
+    """Extract text, chunk, embed, and persist a PDF.
+
+    Returns the number of indexed chunks. Processing failures are persisted on the
+    document row and then re-raised so callers cannot accidentally report a failed
+    RAG index as a successful upload.
+    """
     from app.domain.tutor.ai_adapter import embed_with_fallback
 
     db = get_service_role_client()
@@ -42,18 +47,34 @@ async def process_document(document_id: str, owner_id: str, storage_path: str):
             try:
                 chunk["embedding"] = await embed_with_fallback(chunk["content"])
             except Exception as exc:
-                logger.warning("Embedding failed for chunk %s: %s", chunk["chunk_index"], exc)
+                logger.warning(
+                    "Embedding failed for chunk %s: %s",
+                    chunk["chunk_index"],
+                    exc,
+                )
                 chunk["embedding"] = None
 
         valid_chunks = [chunk for chunk in chunks if chunk.get("embedding")]
         if not valid_chunks:
             raise ValueError(
                 "No embeddings were generated. Configure GEMINI_API_KEY "
-                "for the RAG embedding pipeline."
+                "or a compatible embedding provider."
             )
 
-        # Safe retry behavior: processing the same document twice
-        # must not duplicate chunks.
+        # Never persist vectors with a dimension different from the database schema.
+        expected_dimension = settings.embedding_dimension
+        invalid_dimensions = [
+            len(chunk["embedding"])
+            for chunk in valid_chunks
+            if len(chunk["embedding"]) != expected_dimension
+        ]
+        if invalid_dimensions:
+            raise ValueError(
+                "Embedding dimension mismatch: "
+                f"expected {expected_dimension}, got {invalid_dimensions[0]}"
+            )
+
+        # Safe retry behavior: processing the same document twice must not duplicate chunks.
         db.table("document_chunks").delete().eq(
             "document_id", document_id,
         ).eq("owner_id", owner_id).execute()
@@ -63,16 +84,24 @@ async def process_document(document_id: str, owner_id: str, storage_path: str):
         }).eq("id", document_id).eq("owner_id", owner_id).execute()
         logger.info(
             "Document %s processed: %s chunks from %s pages",
-            document_id, len(valid_chunks), page_count,
+            document_id,
+            len(valid_chunks),
+            page_count,
         )
+        return len(valid_chunks)
     except Exception as exc:
         logger.exception("Document processing failed for %s", document_id)
         db.table("documents").update({
             "status": "failed", "error_message": str(exc)[:500],
         }).eq("id", document_id).eq("owner_id", owner_id).execute()
+        raise
 
 
-def _chunk_text(pages_text: list[tuple[int, str]], document_id: str, owner_id: str) -> list[dict]:
+def _chunk_text(
+    pages_text: list[tuple[int, str]],
+    document_id: str,
+    owner_id: str,
+) -> list[dict]:
     chunks: list[dict] = []
     chunk_size = max(1, settings.max_chunk_size)
     overlap = max(0, min(settings.chunk_overlap, chunk_size - 1))
@@ -87,8 +116,12 @@ def _chunk_text(pages_text: list[tuple[int, str]], document_id: str, owner_id: s
             chunk_text = " ".join(words[start:end])
             if chunk_text:
                 chunks.append({
-                    "id": str(uuid.uuid4()), "document_id": document_id, "owner_id": owner_id,
-                    "chunk_index": chunk_index, "content": chunk_text, "embedding": None,
+                    "id": str(uuid.uuid4()),
+                    "document_id": document_id,
+                    "owner_id": owner_id,
+                    "chunk_index": chunk_index,
+                    "content": chunk_text,
+                    "embedding": None,
                     "page_number": page_num,
                 })
                 chunk_index += 1
