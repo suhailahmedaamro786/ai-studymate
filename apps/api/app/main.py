@@ -14,9 +14,21 @@ app = FastAPI(
     version="0.1.0",
 )
 
+cors_origins = {
+    origin.strip().rstrip("/")
+    for origin in settings.cors_origins.split(",")
+    if origin.strip()
+}
+# Keep production browser access working even if Railway's CORS env var was
+# left with an older value.
+cors_origins.update({
+    "https://ai-studymate-dkel.vercel.app",
+    "http://localhost:3000",
+})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
+    allow_origins=sorted(cors_origins),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
