@@ -187,17 +187,25 @@ class GroqProvider(AIProvider):
 
 class GeminiProvider(AIProvider):
     def __init__(self):
-        import google.generativeai as genai
+        from google import genai
+
         if not settings.gemini_api_key:
             raise RuntimeError("GEMINI_API_KEY is not configured")
-        genai.configure(api_key=settings.gemini_api_key)
-        self._model = genai.GenerativeModel(settings.gemini_model)
+        self._client = genai.Client(api_key=settings.gemini_api_key)
+        self._model = settings.gemini_model
         self._embedding_model = settings.gemini_embedding_model
 
     async def complete(self, messages: list[dict], schema: type | None = None) -> dict:
         prompt = "\n".join(f"{m['role']}: {m['content']}" for m in messages)
-        response = await self._model.generate_content_async(prompt)
-        return {"content": response.text or ""}
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=self._model,
+                contents=prompt,
+            )
+            return {"content": response.text or ""}
+        except Exception as exc:
+            logger.error("Gemini completion failed: %s", exc)
+            raise
 
     async def complete_tutor(self, question: str, chunks: list[dict], grounded: bool) -> dict:
         from app.domain.tutor.response_schema import TutorResponse
@@ -211,6 +219,7 @@ class GeminiProvider(AIProvider):
                 is_grounded=False,
                 citations=[],
             ).model_dump()
+
         context = "\n\n".join(
             (
                 f"[Source: {c.get('document_name', 'unknown')}, "
@@ -224,14 +233,23 @@ class GeminiProvider(AIProvider):
             "Answer ONLY from this context. Never fabricate.\n"
             f"Context:\n{context}\n\nQuestion: {question}"
         )
-        response = await self._model.generate_content_async(prompt)
-        citations = []
-        for c in chunks[:3]:
-            citations.append({
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=self._model,
+                contents=prompt,
+            )
+        except Exception as exc:
+            logger.error("Gemini tutor completion failed: %s", exc)
+            raise
+
+        citations = [
+            {
                 "document_name": c.get("document_name", "unknown"),
                 "page_number": c.get("page_number"),
                 "excerpt": c.get("content", "")[:200],
-            })
+            }
+            for c in chunks[:3]
+        ]
         return TutorResponse(
             answer=response.text or "",
             is_grounded=True,
@@ -239,29 +257,20 @@ class GeminiProvider(AIProvider):
         ).model_dump()
 
     async def embed(self, text: str, task_type: str = "retrieval_document") -> list[float]:
-        # Gemini Embedding 2 uses the current google-genai SDK. The old
-        # text-embedding-004 model was shut down in January 2026.
-        from google import genai
+        # Gemini Embedding 2 uses the current google-genai SDK.
         from google.genai import types
 
         def _embed() -> list[float]:
-            client = genai.Client(api_key=settings.gemini_api_key)
-            try:
-                result = client.models.embed_content(
-                    model=self._embedding_model,
-                    contents=text,
-                    config=types.EmbedContentConfig(
-                        output_dimensionality=settings.embedding_dimension,
-                    ),
-                )
-                if not result.embeddings:
-                    raise RuntimeError("Gemini returned no embeddings")
-                values = result.embeddings[0].values
-                return list(values or [])
-            finally:
-                close = getattr(client, "close", None)
-                if close:
-                    close()
+            result = self._client.models.embed_content(
+                model=self._embedding_model,
+                contents=text,
+                config=types.EmbedContentConfig(
+                    output_dimensionality=settings.embedding_dimension,
+                ),
+            )
+            if not result.embeddings:
+                raise RuntimeError("Gemini returned no embeddings")
+            return list(result.embeddings[0].values or [])
 
         try:
             embedding = await asyncio.to_thread(_embed)
@@ -275,9 +284,7 @@ class GeminiProvider(AIProvider):
                 "Gemini embedding dimension mismatch: "
                 f"got {len(embedding)}, expected {expected_dim}"
             )
-
         return embedding
-
 
 class RetryableError(Exception):
     pass
